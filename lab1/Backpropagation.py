@@ -5,34 +5,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-def generate_linear(n=100):
-    pts = np.random.uniform(0, 1, (n, 2))
-    inputs = []
-    labels = []
-    for pt in pts:
-        inputs.append([pt[0], pt[1]])
-        distance = (pt[0] - pt[1]) / 1.414
-        if pt[0] > pt[1]:
-            labels.append(0)
-        else:
-            labels.append(1)
-    return np.array(inputs), np.array(labels).reshape(n, 1)
-
-def generate_XOR_easy():
-    inputs = []
-    labels = []
+class DataGenerator :
+    def __init__(self, type):
+        self.set_type(type)
     
-    for i in range(11):
-        inputs.append([0.1*i, 0.1*i])
-        labels.append(0)
+    def set_type(self, type):
+        assert(type == 'Linear' or type == 'XOR')
+        self.__type = type
+    
+    def __generate_linear(n):
+        pts = np.random.uniform(0, 1, (n, 2))
+        inputs = []
+        labels = []
+        for pt in pts:
+            inputs.append([pt[0], pt[1]])
+            distance = (pt[0] - pt[1]) / 1.414
+            if pt[0] > pt[1]:
+                labels.append(0)
+            else:
+                labels.append(1)
+        return np.array(inputs), np.array(labels).reshape(n, 1)
 
-        if 0.1*i == 0.5:
-            continue
+    def __generate_XOR_easy():
+        inputs = []
+        labels = []
         
-        inputs.append([0.1*i, 1-0.1*i])
-        labels.append(1)
-    return np.array(inputs), np.array(labels).reshape(21, 1)
+        for i in range(11):
+            inputs.append([0.1*i, 0.1*i])
+            labels.append(0)
 
+            if 0.1*i == 0.5:
+                continue
+            
+            inputs.append([0.1*i, 1-0.1*i])
+            labels.append(1)
+        return np.array(inputs), np.array(labels).reshape(21, 1)
+
+    def get_data(self, n=100):
+        func_dict = {
+            'Linear': DataGenerator.__generate_linear(n),
+            'XOR': DataGenerator.__generate_XOR_easy()
+        }
+        func = func_dict[self.__type]
+
+        return func
+        
 def init_parameter(layer_dims):
     np.random.seed(56)
     parameters = {}
@@ -47,6 +64,9 @@ def init_parameter(layer_dims):
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
+
+def derivative_sigmoid(x):
+    return np.multiply(x, 1.0 - x)
 
 def forward_pass(X, parameters):
     w_num = len(parameters) // 2
@@ -84,9 +104,6 @@ def loss(predict, label):
     
     ce = (1./m) * (-np.dot(label.T, np.log(predict).T) - np.dot((1-label).T, np.log(1-predict).T))
     return ce
-
-def derivative_sigmoid(x):
-    return np.multiply(x, 1.0 - x)
 
 def backward_pass(AL, X, Y, records):
     grads = {}
@@ -165,7 +182,7 @@ def model(X, Y, layer_dims, epoch=3000, learning_rate=0.08, print_step=1000):
 
     return parameters 
 
-def predict(X, Y, parameters, test=False):
+def predict(X, Y, parameters):
     m = X.shape[0]
     n = len(parameters) // 2
     pred = np.zeros([1, m])
@@ -178,8 +195,11 @@ def predict(X, Y, parameters, test=False):
         else:
             pred[0, i] = 0
 
-    accuracy = np.sum(((pred==Y.T) / m))
-    print(accuracy)
+    correct_num = np.sum(pred == Y.T)
+    wrong_num = m - correct_num
+    accuracy = correct_num / m 
+    print(f"Accuracy: {accuracy}\n")
+    print(f"Wrong Prediction Count: {wrong_num}\n")
 
     return AL, pred
 
@@ -200,26 +220,26 @@ def show_result(x, y, pred_y):
         else:
             plt.plot(x[i][0], x[i][1], 'bo')
         
-    plt.show()
+    plt.show() 
 
 if __name__ == '__main__':
-    x_train, y_train= generate_XOR_easy()
-    x_test, y_test = generate_XOR_easy()
+    x_train, y_train= DataGenerator('Linear').get_data(1000)
+    x_test, y_test = DataGenerator('Linear').get_data(100)
     layer_dims = [2, 10, 10, 1]
 
-    print("---Start training---")
+    print("---Start training---\n")
     parameters = model(x_train, y_train, layer_dims, 10000, 0.1, 1000)
-    print("---Training finished---")
+    print("---Training finished---\n")
 
-    print("Training accuracy: \n")
+    print("Train result:\n")
     train_AL, train_pred = predict(x_train, y_train, parameters)
     
-    print("---Start testing---")    
-    print("Testing accuracy: \n")
-    test_AL, test_pred = predict(x_test, y_test, parameters, True)
-    print("---Testing finished---")
+    print("---Start testing---\n")    
+    print("Test result:\n")
+    test_AL, test_pred = predict(x_test, y_test, parameters)
+    print("---Testing finished---\n")
     
-    print("Test prediction:")
+    print("Test Prediction:\n")
     print(test_AL.reshape(-1, 1))
     show_result(x_train, y_train, train_pred)
     show_result(x_test, y_test, test_pred)
