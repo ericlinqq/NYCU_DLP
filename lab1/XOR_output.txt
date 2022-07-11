@@ -1,4 +1,5 @@
 ---Start training---
+
 Epoch: 0 Loss: [[2.35742884]]
 
 Epoch: 1000 Loss: [[0.65583282]]
@@ -20,15 +21,25 @@ Epoch: 8000 Loss: [[0.02112398]]
 Epoch: 9000 Loss: [[0.01684339]]
 
 ---Training finished---
-Training accuracy: 
 
-1.0000000000000002
+Train result:
+
+Accuracy: 1.0
+
+Wrong Prediction Count: 0
+
 ---Start testing---
-Testing accuracy: 
 
-1.0000000000000002
+Test result:
+
+Accuracy: 1.0
+
+Wrong Prediction Count: 0
+
 ---Testing finished---
-Test prediction:
+
+Test Prediction:
+
 [[0.00514795]
  [0.99364383]
  [0.0074489 ]
