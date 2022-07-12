@@ -78,7 +78,8 @@ class NeuralNetwork:
         """
         Returns:
             A dictionary of parameters that contains the following:
-                W(l): Weight matrix in each layer (l-th_dim, (l-1)-th_dim) ndarray 
+                W(l): Weight matrix in each layer (l-th_dim, (l-1)-th_dim) ndarray
+                b(l);: Bias vector in each layer (l-th_dim, 1) ndarray
         """
         np.random.seed(56)
         parameters = {}
@@ -86,7 +87,8 @@ class NeuralNetwork:
         
         # Initialize weight and bias
         for l in range(1, Layers):
-            parameters['W' + str(l)] = np.random.randn(self.__layer_dims[l], self.__layer_dims[l-1]) 
+            parameters['W' + str(l)] = np.random.randn(self.__layer_dims[l], self.__layer_dims[l-1])
+            parameters['b' + str(l)] = np.zeros([self.__layer_dims[l], 1])
         
         return parameters
     
@@ -100,7 +102,7 @@ class NeuralNetwork:
                 linear_record: Weight, bias and the input before linear calculation.
                 activation_record: The input before activation calculation.
         """
-        w_num = len(parameters) 
+        w_num = len(parameters) // 2
         A = X.T
         records = []
 
@@ -109,11 +111,13 @@ class NeuralNetwork:
             activation_record = {}
             A_prev = A
             W = parameters['W' + str(i)]
+            b = parameters['b' + str(i)]
 
             # Linear calculation
             linear_record['W' + str(i)] = W
+            linear_record['b' + str(i)] = b
             linear_record['A_prev' + str(i)] = A_prev
-            Z = np.dot(W, A_prev)
+            Z = np.dot(W, A_prev) + b
 
             # Activation calculation
             activation_record['Z' + str(i)] = Z 
@@ -150,7 +154,8 @@ class NeuralNetwork:
         Returns:
             grads: A dictionary of dC_dA(l-1), dC_dW(l), dC_db(l) matrices.
                 dC_dA(l-1): ((l-1)-th_dim, data_num) ndarray (same as A(l-1))
-                dC_dW(l): (l-th_dim, (l-1)th_dim) ndarrray (same as W(l)) 
+                dC_dW(l): (l-th_dim, (l-1)th_dim) ndarrray (same as W(l))
+                dC_db(l): (l-th_dim, 1) ndarray (same as b(l))
         """
         grads = {}
         L = len(records)
@@ -164,14 +169,17 @@ class NeuralNetwork:
         linear_record, activation_record = records[-1]
         A_prev = linear_record['A_prev' + str(L)]
         W = linear_record['W' + str(L)]
+        b = linear_record['b' + str(L)]
         m = A_prev.shape[1]
         dC_dW = 1./m * np.dot(dC_dZL, A_prev.T)
+        dC_db = 1./m * np.sum(dC_dZL, axis=1, keepdims=True)
 
         dC_dAprev = np.dot(W.T, dC_dZL)
         assert (dC_dAprev.shape == A_prev.shape) 
         assert (dC_dW.shape == W.shape)
+        assert (dC_db.shape == b.shape)
         
-        grads['dA' + str(L-1)], grads['dW' + str(L)] = dC_dAprev, dC_dW
+        grads['dA' + str(L-1)], grads['dW' + str(L)], grads['db' + str(L)] = dC_dAprev, dC_dW, dC_db
 
         # (L-1)th ~ 1st layer
         for l in reversed(range(1, L)):
@@ -183,22 +191,26 @@ class NeuralNetwork:
             
             A_prev= linear_record['A_prev' + str(l)]
             W = linear_record['W'+ str(l)]
+            b = linear_record['b' + str(l)]
             m = A_prev.shape[1]
             dC_dW = 1./m * np.dot(dC_dZ, A_prev.T)
+            dC_db = 1./m * np.sum(dC_dZ, axis = 1, keepdims = True)
             dC_dAprev = np.dot(W.T, dC_dZ)
 
             assert (dC_dAprev.shape == A_prev.shape)
             assert (dC_dW.shape == W.shape)
+            assert (dC_db.shape == b.shape)
 
-            grads["dA" + str(l-1)], grads["dW" + str(l)] = dC_dAprev, dC_dW
+            grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = dC_dAprev, dC_dW, dC_db
 
         return grads
 
     def update_parameters(self, parameters, grads):
-        L = len(parameters)
+        L = len(parameters) // 2
 
         for l in range(L):
             parameters['W' + str(l+1)] -= self.__lr*grads['dW' + str(l+1)]
+            parameters['b' + str(l+1)] -= self.__lr*grads['db' + str(l+1)]
 
         return parameters
 
@@ -235,7 +247,7 @@ class NeuralNetwork:
             pred: 0/1 prediction based on the output.
         """
         m = X.shape[0]
-        n = len(parameters)
+        n = len(parameters) // 2
         pred = np.zeros([1, m])
 
         AL, records = self.forward_pass(X, parameters)
