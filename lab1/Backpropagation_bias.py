@@ -60,7 +60,7 @@ class DataGenerator :
         return func
 
 class NeuralNetwork:
-    def __init__(self, layer_dims, epoch=3000, lr=0.08, print_step=100):
+    def __init__(self, layer_dims, epoch=2000, lr=0.08, print_step=100):
         """
         Args: 
             layer_dims: a list of the dims in each layer (include input and output layer) [2, dim1, dim2, ..., 1].
@@ -69,6 +69,7 @@ class NeuralNetwork:
         self.__epoch = epoch
         self.__lr = lr
         self.__print_step = print_step
+        self.__epsilon = 1e-4
     
     def set_layer_dims(self, layer_dims):
         assert isinstance(layer_dims, list)
@@ -131,8 +132,7 @@ class NeuralNetwork:
 
         return A, records
 
-    @staticmethod
-    def compute_loss(predict, label):
+    def compute_loss(self, predict, label):
         """
         Args:
             predict: (1, data_num) ndarray
@@ -141,7 +141,7 @@ class NeuralNetwork:
         """
         m = label.shape[0]
         
-        ce = (1./m) * (-np.dot(label.T, np.log(predict).T) - np.dot((1-label).T, np.log(1-predict).T))
+        ce = (1./m) * (-np.dot(label.T, np.log(predict+self.__epsilon).T) - np.dot((1-label).T, np.log(1-predict+self.__epsilon).T))
         return ce
 
     def backward_pass(self, AL, X, Y, records):
@@ -162,7 +162,7 @@ class NeuralNetwork:
         m = AL.shape[1]
 
         ## The L-th layer    
-        dC_dAL = - (np.divide(Y.T, AL) - np.divide(1-Y.T, 1-AL))
+        dC_dAL = - (np.divide(Y.T, AL+self.__epsilon) - np.divide(1-Y.T, 1-AL+self.__epsilon))
         dC_dZL = dC_dAL * derivative_sigmoid(AL)
         assert(dC_dZL.shape == AL.shape)
 
@@ -227,7 +227,7 @@ class NeuralNetwork:
         for i in range(1, self.__epoch+1):
             AL, records = self.forward_pass(X, parameters)
 
-            loss = NeuralNetwork.compute_loss(AL, Y)
+            loss = self.compute_loss(AL, Y)
 
             grads = self.backward_pass(AL, X, Y, records)
 
@@ -293,10 +293,10 @@ class NeuralNetwork:
 
 def main():
     Data = DataGenerator('Linear')
-    x_train, y_train= Data.get_data(1000)
+    x_train, y_train= Data.get_data(100)
     x_test, y_test = Data.get_data(100) 
 
-    Network = NeuralNetwork(layer_dims=[2, 10, 10, 1], epoch=1000, lr=0.1, print_step=1000)
+    Network = NeuralNetwork(layer_dims=[2, 10, 10, 1], epoch=5000, lr=0.1, print_step=1000)
     print("---Start training---\n")
     parameters, costs = Network.train(x_train, y_train)
     plt.figure(1)
