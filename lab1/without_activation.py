@@ -88,8 +88,7 @@ class NeuralNetwork:
         
         # Initialize weight
         for l in range(1, Layers):
-            parameters['W' + str(l)] = np.random.randn(self.__layer_dims[l], self.__layer_dims[l-1]) 
-        
+            parameters['W' + str(l)] = np.random.rand(self.__layer_dims[l], self.__layer_dims[l-1]) 
         return parameters
     
     def forward_pass(self, X, parameters):
@@ -119,11 +118,13 @@ class NeuralNetwork:
 
             # Activation calculation
             activation_record['Z' + str(i)] = Z 
-            A = sigmoid(Z)
+            if i == w_num:
+                A = sigmoid(Z)
+            else:
+                A = Z
 
             record = (linear_record, activation_record)
             records.append(record)
-        
         
         assert(A.shape == (1, X.shape[0]))
 
@@ -172,26 +173,21 @@ class NeuralNetwork:
         assert (dC_dAprev.shape == A_prev.shape) 
         assert (dC_dW.shape == W.shape)
         
-        grads['dA' + str(L-1)], grads['dW' + str(L)] = dC_dAprev, dC_dW
+        grads['dW' + str(L)] = dC_dW
 
         # (L-1)th ~ 1st layer
         for l in reversed(range(1, L)):
             linear_record, activation_record= records[l-1]
-            
-            Z = activation_record['Z' + str(l)]
-            dC_dZ = np.array(grads["dA" + str(l)]) * derivative_sigmoid(sigmoid(Z))
-            assert (dC_dZ.shape == Z.shape)  
-            
+
             A_prev= linear_record['A_prev' + str(l)]
             W = linear_record['W'+ str(l)]
             m = A_prev.shape[1]
-            dC_dW = 1./m * np.dot(dC_dZ, A_prev.T)
-            dC_dAprev = np.dot(W.T, dC_dZ)
-
+            dC_dW = 1./m * np.dot(dC_dAprev, A_prev.T)
+            dC_dAprev = np.dot(W.T, dC_dAprev)
             assert (dC_dAprev.shape == A_prev.shape)
             assert (dC_dW.shape == W.shape)
 
-            grads["dA" + str(l-1)], grads["dW" + str(l)] = dC_dAprev, dC_dW
+            grads["dW" + str(l)] = dC_dW
 
         return grads
 
@@ -230,13 +226,13 @@ class NeuralNetwork:
 
             parameters = self.update_parameters(parameters, grads)
 
-            accuracy = np.sum(pred == Y.T) / Y.shape[0]
+            accuracy = np.sum(pred == Y.T) / m
 
             if i % self.__print_step == 0:
                 print(f"Epoch: {i} Loss: {loss[0][0]} Accuracy: {accuracy}\n")
 
             costs.append(loss[0][0])
-
+            
             if loss < 0.001:
                 break
 
@@ -306,7 +302,7 @@ def main():
     plt.figure(1)
     NeuralNetwork.learning_curve(costs)
     print("---Training finished---\n")
-    print(f"Training Time: {end-start}")
+    print(f"Training Time: {end-start}\n")
 
     print("Train result:\n")
     train_AL, train_pred = Network.predict(x_train, y_train, parameters)

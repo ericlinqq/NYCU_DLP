@@ -2,6 +2,7 @@
 %matplotlib inline
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
@@ -60,7 +61,7 @@ class DataGenerator :
         return func
 
 class NeuralNetwork:
-    def __init__(self, layer_dims, epoch=2000, lr=0.08, print_step=100):
+    def __init__(self, layer_dims, epoch=100000, lr=0.1, print_step=10000):
         """
         Args: 
             layer_dims: a list of the dims in each layer (include input and output layer) [2, dim1, dim2, ..., 1].
@@ -223,9 +224,17 @@ class NeuralNetwork:
         """
         costs = []
         parameters = self.init_parameters()
-
+        m = Y.shape[0]
+        pred = np.zeros([1, m])
+        
         for i in range(1, self.__epoch+1):
             AL, records = self.forward_pass(X, parameters)
+            
+            for j in range(m):
+                if AL[0, j] >= 0.5:
+                    pred[0, j] = 1
+                else:
+                    pred[0, j] = 0
 
             loss = self.compute_loss(AL, Y)
 
@@ -233,10 +242,15 @@ class NeuralNetwork:
 
             parameters = self.update_parameters(parameters, grads)
 
+            accuracy = np.sum(pred == Y.T) / m
+
             if i % self.__print_step == 0:
-                print(f"Epoch: {i} Loss: {loss}\n")
+                print(f"Epoch: {i} Loss: {loss[0][0]} Accuracy: {accuracy}\n")
 
             costs.append(loss[0][0])
+
+            if loss < 0.001:
+                break
 
         return parameters, costs 
 
@@ -293,15 +307,18 @@ class NeuralNetwork:
 
 def main():
     Data = DataGenerator('Linear')
-    x_train, y_train= Data.get_data(100)
+    x_train, y_train= Data.get_data(1000)
     x_test, y_test = Data.get_data(100) 
 
-    Network = NeuralNetwork(layer_dims=[2, 10, 10, 1], epoch=5000, lr=0.1, print_step=1000)
+    Network = NeuralNetwork(layer_dims=[2, 10, 10, 1], epoch=100000, lr=0.1, print_step=5000)
     print("---Start training---\n")
+    start = time.time()
     parameters, costs = Network.train(x_train, y_train)
+    end = time.time()
     plt.figure(1)
     NeuralNetwork.learning_curve(costs)
     print("---Training finished---\n")
+    print(f"Training Time: {end-start}")
 
     print("Train result:\n")
     train_AL, train_pred = Network.predict(x_train, y_train, parameters)
