@@ -318,7 +318,7 @@ def main():
     plt.figure(1)
     NeuralNetwork.learning_curve(costs)
     print("---Training finished---\n")
-    print(f"Training Time: {end-start}")
+    print(f"Training Time: {end-start}\n")
 
     print("Train result:\n")
     train_AL, train_pred = Network.predict(x_train, y_train, parameters)
@@ -337,4 +337,3 @@ def main():
     NeuralNetwork.show_result(x_test, y_test, test_pred)
 if __name__ == '__main__':
     main()
-# %%

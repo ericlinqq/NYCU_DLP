@@ -294,7 +294,7 @@ class NeuralNetwork:
         plt.ylabel('Loss')
 
 def main():
-    Data = DataGenerator('Linear')
+    Data = DataGenerator('XOR')
     x_train, y_train= Data.get_data(1000)
     x_test, y_test = Data.get_data(100) 
 
@@ -306,7 +306,7 @@ def main():
     plt.figure(1)
     NeuralNetwork.learning_curve(costs)
     print("---Training finished---\n")
-    print(f"Training Time: {end-start}")
+    print(f"Training Time: {end-start}\n")
 
     print("Train result:\n")
     train_AL, train_pred = Network.predict(x_train, y_train, parameters)
