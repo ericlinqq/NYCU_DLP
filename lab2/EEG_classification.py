@@ -48,16 +48,16 @@ class DeepConvNet(nn.Module):
             
         self.dense = nn.Linear(8600, 2)
 
-def forward(self, x):
-    x = self.conv0(x)
-    x = self.conv1(x)
-    x = self.conv2(x)
-    x = self.conv3(x)
-    x = self.conv4(x)
-    x = x.view(x.shape[0], -1)
-    x = self.dense(x)
+    def forward(self, x):
+        x = self.conv0(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = x.view(x.shape[0], -1)
+        x = self.dense(x)
 
-    return x
+        return x
 #%%
 def train(train_dataloader, test_dataloader, activations, device):
     loss = nn.CrossEntropyLoss()
