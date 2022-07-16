@@ -1,4 +1,3 @@
-#%%
 import pandas as pd
 import numpy as np
 import torch
@@ -7,9 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from dataloader import read_bci_data
-%matplotlib inline
+import argparse
 
-#%%
 class MyDataset(Dataset):
     def __init__(self, x, y):
         self.x = x
@@ -21,7 +19,6 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
 
-#%%
 class DeepConvNet(nn.Module):
     """
     Input: (B, 2, 750)
@@ -67,7 +64,6 @@ class DeepConvNet(nn.Module):
 
         return x
 
-#%%
 class EEGNet(nn.Module):
     """
     Input: (B, 2, 750)
@@ -109,11 +105,11 @@ class EEGNet(nn.Module):
         x = self.firstConv(x)
         x = self.depthwiseConv(x)
         x = self.seperableConv(x)
+        x = x.view(x.shape[0], -1)
         x = self.classify(x)
 
         return x
 
-#%%
 def train(train_dataloader, model, criterion, optimizer, device):
     model.train()
     total_loss = 0
@@ -145,7 +141,6 @@ def train(train_dataloader, model, criterion, optimizer, device):
 
     return total_loss, accuracy
 
-#%%
 def test(test_dataloader, model, device):
     model.eval()
     accuracy = 0
@@ -159,16 +154,17 @@ def test(test_dataloader, model, device):
 
     return accuracy
     
-#%%
-def run_model(train_dataloader, test_dataloader, Network, activation_dict, device):
+def run_model(train_dataloader, test_dataloader, activation_dict, device):
     df = pd.DataFrame()
     df['Epoch'] = range(1, epochs+1)
     criterion = nn.CrossEntropyLoss()
 
     for name, activation in activation_dict.items():
+        print(f"Activation function: {name}\n")
         model = Network(activation)
+        print(f"{model.__class__.__name__}\n")
         model.to(device)
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         acc_train = []
         acc_test = []
 
@@ -176,8 +172,8 @@ def run_model(train_dataloader, test_dataloader, Network, activation_dict, devic
             # Train
             total_loss, accuracy = train(train_dataloader, model, criterion, optimizer, device)
             acc_train.append(accuracy)
-            if epoch % 50 == 0:
-                print(f"Epoch: {epoch} Loss: {total_loss} Accuracy: {accuracy}")
+            if epoch % print_interval == 0:
+                print(f"Epoch: {epoch} Loss: {total_loss} Accuracy: {accuracy}\n")
 
             # Test
             accuracy = test(test_dataloader, model, device)
@@ -186,16 +182,39 @@ def run_model(train_dataloader, test_dataloader, Network, activation_dict, devic
         df[name+'_train'] = acc_train
         df[name+'_test'] = acc_test 
         
-    return df
-    
-# %%
-def main():
-    batch_size = 64
-    learning_rate = 1e-2
-    epochs = 300
+    return df, model
 
+def check_network_type(input):
+    int_value = int(input)
+    
+    if int_value != 0 and int_value != 1:
+        raise argparse.ArgumentTypeError(f"Network type should be 0 or 1")
+    
+    return int_value
+
+def parse_argument():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-b', type=int, default=64, help='Batch size')
+    parser.add_argument('-l', type=float, default=1e-2, help='Learning rate')
+    parser.add_argument('-e', type=int, default=300, help='Number of epoch') 
+    parser.add_argument('-i', type=int, default=50, help='Print every i epochs')
+    parser.add_argument('-n', type=check_network_type, default=0, help='Netweok type, 0: DeepConvNet, 1: EEGNet')
+    parser.add_argument('-w', type=float, default=0, help='optimizer weight decay')
+    return parser.parse_args()
+
+def plot(df, model):
+    df.plot(title=f'Activation function comparison. ({model.__class__.__name__})', 
+            xlabel='Epoch',
+            ylabel='Accuracy(%)',
+            legend=True,
+            figsize=(10, 5)
+    )
+
+    plt.savefig(f"output/{model.__class__.__name__}/comparison_reg.png")
+
+def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using {device} device")
+    print(f"Using {device} device\n")
 
     x_train, y_train, x_test, y_test = read_bci_data()
     TrainDataset = MyDataset(x_train, y_train)
@@ -205,10 +224,26 @@ def main():
 
     activation_dict = {'ReLU': nn.ReLU(), 'LeakyReLU': nn.LeakyReLU(), 'ELU': nn.ELU()}
 
-    df = run_model(train_dataloader, test_dataloader, DeepConvNet, activation_dict, device)
+    df, model = run_model(train_dataloader, test_dataloader, activation_dict, device)
+    model_scripted = torch.jit.script(model)
+    model_scripted.save(f"output/{model.__class__.__name__}/scripted_reg.pt")
+    df.set_index('Epoch', inplace=True)
 
-# %%
+    df.to_csv(f'output/{model.__class__.__name__}/accuracy_reg.csv')
+    plot(df, model)
+
 if __name__ == '__main__':
-    main()
+    args = parse_argument()
+    batch_size = args.b
+    learning_rate = args.l
+    epochs = args.e
+    print_interval = args.i
+    Network_type = args.n
+    weight_decay = args.w
 
-# %%
+    if not Network_type:
+        Network = DeepConvNet
+    else:
+        Network = EEGNet
+
+    main()
