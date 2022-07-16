@@ -1,5 +1,5 @@
 #%%
-from tkinter import W
+import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -8,16 +8,6 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from dataloader import read_bci_data
 %matplotlib inline
-
-#%%
-batch_size = 64
-learning_rate = 1e-2
-epochs = 300
-
-#%%
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"Using {device} device")
-x_train, y_train, x_test, y_test = read_bci_data()
 
 #%%
 class MyDataset(Dataset):
@@ -30,13 +20,6 @@ class MyDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
-
-#%%
-TrainDataset = MyDataset(x_train, y_train)
-TestDataset = MyDataset(x_test, y_test)
-
-train_dataloader = DataLoader(TrainDataset, batch_size=batch_size, shuffle=True, num_workers=2)
-test_dataloader = DataLoader(TestDataset, batch_size=batch_size, shuffle=True, num_workers=2)
 
 #%%
 class DeepConvNet(nn.Module):
@@ -53,7 +36,7 @@ class DeepConvNet(nn.Module):
     Conv2D: (B, 100, 1, 86)
     MaxPool2D: (B, 200, 1, 43)
     Flatten: (B, 8600)
-    Dense: (B, 2)
+    Linear: (B, 2)
     """
     def __init__(self, activation):
         super(DeepConvNet, self).__init__()
@@ -85,7 +68,18 @@ class DeepConvNet(nn.Module):
         return x
 
 #%%
-class EEGNet(nn.modules):
+class EEGNet(nn.Module):
+    """
+    Input: (B, 2, 750)
+    Reshape: (B, 1, 2, 750)
+    Conv2d: (B, 16, 2, 750)
+    Conv2d: (B, 32, 1, 750)
+    AvgPool2d: (B, 32, 1, 187)
+    Conv2d: (B, 32, 1, 187)
+    AvgPool2d: (B, 32, 1, 23)
+    Flatten: (B, 736)
+    Linear: (B, 2)
+    """
     def __init__(self, activation):
         super(EEGNet, self).__init__()
         self.firstConv = nn.Sequential(
@@ -120,24 +114,101 @@ class EEGNet(nn.modules):
         return x
 
 #%%
-def train(train_dataloader, test_dataloader, Network, activations, device):
-    criterion = nn.CrossEntropyLoss()
+def train(train_dataloader, model, criterion, optimizer, device):
+    model.train()
     total_loss = 0
     accuracy = 0
-    for activation in activations:
+
+    for batch_idx, (input, label) in enumerate(train_dataloader):
+        # training data and label
+        input = input.to(device, dtype=torch.float)
+        label = label.to(device, dtype=torch.long)
+        
+        # Zero the gradients for every batch
+        optimizer.zero_grad()
+
+        # Predict for this batch
+        output = model(input)
+
+        # Compute loss and its gradients
+        loss = criterion(output, label)
+        loss.backward()
+        
+        # Update weights
+        optimizer.step()
+
+        total_loss += loss.item()
+        accuracy += output.max(dim=1)[1].eq(label).sum().item()
+
+    total_loss /= len(train_dataloader.dataset)
+    accuracy = 100. * accuracy / len(train_dataloader.dataset)
+
+    return total_loss, accuracy
+
+#%%
+def test(test_dataloader, model, device):
+    model.eval()
+    accuracy = 0
+    for batch_idx, (input, label) in enumerate(test_dataloader):
+        input = input.to(device, dtype=torch.float)
+        label = label.to(device, dtype=torch.long)
+        output = model(input)
+        accuracy += output.max(dim=1)[1].eq(label).sum().item()
+    
+    accuracy = 100. * accuracy / len(test_dataloader.dataset)
+
+    return accuracy
+    
+#%%
+def run_model(train_dataloader, test_dataloader, Network, activation_dict, device):
+    df = pd.DataFrame()
+    df['Epoch'] = range(1, epochs+1)
+    criterion = nn.CrossEntropyLoss()
+
+    for name, activation in activation_dict.items():
         model = Network(activation)
         model.to(device)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        
-        for i in range(1, epochs+1):
+        acc_train = []
+        acc_test = []
+
+        for epoch in range(1, epochs+1):
             # Train
-            model.train()
-            for batch_idx, (data, label) in enumerate(train_dataloader):
-                data = data.to(device, dtype=torch.float)
-                label = label.to(device, dtype=torch.long)
-                output = model(data)
-                loss = criterion(output, label)
-                loss.backward()
-                optimizer.step()
-                
+            total_loss, accuracy = train(train_dataloader, model, criterion, optimizer, device)
+            acc_train.append(accuracy)
+            if epoch % 50 == 0:
+                print(f"Epoch: {epoch} Loss: {total_loss} Accuracy: {accuracy}")
+
+            # Test
+            accuracy = test(test_dataloader, model, device)
+            acc_test.append(accuracy)
+        
+        df[name+'_train'] = acc_train
+        df[name+'_test'] = acc_test 
+        
+    return df
+    
+# %%
+def main():
+    batch_size = 64
+    learning_rate = 1e-2
+    epochs = 300
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using {device} device")
+
+    x_train, y_train, x_test, y_test = read_bci_data()
+    TrainDataset = MyDataset(x_train, y_train)
+    TestDataset = MyDataset(x_test, y_test)
+    train_dataloader = DataLoader(TrainDataset, batch_size=batch_size, shuffle=True, num_workers=2)
+    test_dataloader = DataLoader(TestDataset, batch_size=batch_size, shuffle=True, num_workers=2)
+
+    activation_dict = {'ReLU': nn.ReLU(), 'LeakyReLU': nn.LeakyReLU(), 'ELU': nn.ELU()}
+
+    df = run_model(train_dataloader, test_dataloader, DeepConvNet, activation_dict, device)
+
+# %%
+if __name__ == '__main__':
+    main()
+
 # %%
