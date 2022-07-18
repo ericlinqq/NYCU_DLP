@@ -217,7 +217,7 @@ def main():
     TrainDataset = MyDataset(x_train, y_train)
     TestDataset = MyDataset(x_test, y_test)
     train_dataloader = DataLoader(TrainDataset, batch_size=batch_size, shuffle=True, num_workers=2)
-    test_dataloader = DataLoader(TestDataset, batch_size=batch_size, shuffle=True, num_workers=2)
+    test_dataloader = DataLoader(TestDataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
     activation_dict = {'ReLU': nn.ReLU(), 'LeakyReLU': nn.LeakyReLU(), 'ELU': nn.ELU()}
 
