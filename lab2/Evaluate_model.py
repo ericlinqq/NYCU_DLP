@@ -2,19 +2,7 @@ from dataloader import read_bci_data
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from EEG_classification import MyDataset, EEGNet, DeepConvNet
-
-def test(test_dataloader, model, device):
-    model.eval()
-    accuracy = 0
-    for batch_idx, (input, label) in enumerate(test_dataloader):
-        input = input.to(device, dtype=torch.float)
-        label = label.to(device, dtype=torch.long)
-        output = model(input)
-        accuracy += output.max(dim=1)[0].eq(label).sum().item()
-    accuracy = 100. * accuracy / len(test_dataloader.dataset)
-
-    return accuracy
+from EEG_classification import MyDataset, EEGNet, DeepConvNet, test
 
 def main():
     _, _, x_test, y_test = read_bci_data()
@@ -25,10 +13,12 @@ def main():
     print(f"Using {device} device\n")
 
     model = EEGNet(nn.ReLU())
-    model.load_state_dict(torch.load('output\EEGNet\model\ReLU.pt'))
+    model.load_state_dict(torch.load('output/EEGNet/model/ReLU.pt', map_location=device))
     model.to(device)
+    print(model)
 
     return test(test_dataloader, model, device)
 
 if __name__ == '__main__':
-    main() 
+    accuracy = main() 
+    print(accuracy)

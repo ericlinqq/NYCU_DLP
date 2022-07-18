@@ -7,6 +7,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from dataloader import read_bci_data
 import argparse
+import copy
 
 class MyDataset(Dataset):
     def __init__(self, x, y):
@@ -109,7 +110,52 @@ class EEGNet(nn.Module):
         x = self.classify(x)
 
         return x
+
+def train(train_dataloader, model, criterion, optimizer, device):
+    model.train()
+    total_loss = 0
+    accuracy = 0
+
+    for batch_idx, (input, label) in enumerate(train_dataloader): 
+        # training data and label
+        input = input.to(device, dtype=torch.float)
+        label = label.to(device, dtype=torch.long)
+        
+        # Zero the gradients for every batch
+        optimizer.zero_grad()
+
+        # Predict for this batch
+        output = model(input)
+
+        # Compute loss and its gradients
+        loss = criterion(output, label)
+        loss.backward()
+        
+        # Update weights
+        optimizer.step()
+
+        total_loss += loss.item()
+        accuracy += output.max(dim=1)[1].eq(label).sum().item()
+
+    total_loss /= len(train_dataloader.dataset)
+    accuracy = 100. * accuracy / len(train_dataloader.dataset)
     
+    return total_loss, accuracy
+
+def test(test_dataloader, model, device):
+    model.eval()
+    with torch.no_grad():
+        accuracy = 0
+        for batch_idx, (input, label) in enumerate(test_dataloader):
+            input = input.to(device, dtype=torch.float)
+            label = label.to(device, dtype=torch.long)
+            output = model(input)
+            accuracy += output.max(dim=1)[1].eq(label).sum().item()
+
+    accuracy = 100. * accuracy / len(test_dataloader.dataset)
+
+    return accuracy
+
 def run_model(train_dataloader, test_dataloader, activation_dict, device):
     df = pd.DataFrame()
     df['Epoch'] = range(1, epochs+1)
@@ -128,53 +174,18 @@ def run_model(train_dataloader, test_dataloader, activation_dict, device):
 
         for epoch in range(1, epochs+1):
             # Train
-            model.train()
-            total_loss = 0
-            accuracy = 0
-
-            for batch_idx, (input, label) in enumerate(train_dataloader): 
-                # training data and label
-                input = input.to(device, dtype=torch.float)
-                label = label.to(device, dtype=torch.long)
-                
-                # Zero the gradients for every batch
-                optimizer.zero_grad()
-
-                # Predict for this batch
-                output = model(input)
-
-                # Compute loss and its gradients
-                loss = criterion(output, label)
-                loss.backward()
-                
-                # Update weights
-                optimizer.step()
-
-                total_loss += loss.item()
-                accuracy += output.max(dim=1)[1].eq(label).sum().item()
-
-            total_loss /= len(train_dataloader.dataset)
-            accuracy = 100. * accuracy / len(train_dataloader.dataset)
+            total_loss, accuracy = train(train_dataloader, model, criterion, optimizer, device)
             acc_train.append(accuracy)
             if epoch % print_interval == 0:
                 print(f"Epoch: {epoch} Loss: {total_loss} Accuracy: {accuracy}\n")
 
             # Test
-            model.eval()
-            with torch.no_grad():
-                accuracy = 0
-                for batch_idx, (input, label) in enumerate(test_dataloader):
-                    input = input.to(device, dtype=torch.float)
-                    label = label.to(device, dtype=torch.long)
-                    output = model(input)
-                    accuracy += output.max(dim=1)[1].eq(label).sum().item()
-        
-                accuracy = 100. * accuracy / len(test_dataloader.dataset)
-                acc_test.append(accuracy)
+            accuracy = test(test_dataloader, model, device)
+            acc_test.append(accuracy)
 
             if accuracy > best_accuracy[name]:
                 best_accuracy[name] = accuracy
-                best_weight[name] = model.state_dict()
+                best_weight[name] = copy.deepcopy(model.state_dict())
 
         df[name+'_train'] = acc_train
         df[name+'_test'] = acc_test 
@@ -207,7 +218,7 @@ def plot(df, model):
             figsize=(10, 5)
     )
 
-    plt.savefig(f"output/{model.__class__.__name__}/comparison_lr.png")
+    plt.savefig(f"output/{model.__class__.__name__}/comparison.png")
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -222,6 +233,7 @@ def main():
     activation_dict = {'ReLU': nn.ReLU(), 'LeakyReLU': nn.LeakyReLU(), 'ELU': nn.ELU()}
 
     df, model, best_weight, best_accuracy = run_model(train_dataloader, test_dataloader, activation_dict, device)
+
     for name, weight in best_weight.items():
         torch.save(weight, f"output/{model.__class__.__name__}/model/{name}.pt")
     
@@ -230,7 +242,7 @@ def main():
 
     df.set_index('Epoch', inplace=True)
 
-    df.to_csv(f'output/{model.__class__.__name__}/accuracy_lr.csv')
+    df.to_csv(f'output/{model.__class__.__name__}/accuracy.csv')
     plot(df, model)
 
 if __name__ == '__main__':
