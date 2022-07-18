@@ -123,12 +123,15 @@ def run_model(train_dataloader, test_dataloader, activation_dict, device):
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         acc_train = []
         acc_test = []
+        best_weight = dict.fromkeys(activation_dict, None)
+        best_accuracy = dict.fromkeys(activation_dict, 0)
 
         for epoch in range(1, epochs+1):
             # Train
             model.train()
             total_loss = 0
             accuracy = 0
+
             for batch_idx, (input, label) in enumerate(train_dataloader): 
                 # training data and label
                 input = input.to(device, dtype=torch.float)
@@ -168,11 +171,15 @@ def run_model(train_dataloader, test_dataloader, activation_dict, device):
         
                 accuracy = 100. * accuracy / len(test_dataloader.dataset)
                 acc_test.append(accuracy)
-            
+
+            if accuracy > best_accuracy[name]:
+                best_accuracy[name] = accuracy
+                best_weight[name] = model.state_dict()
+
         df[name+'_train'] = acc_train
         df[name+'_test'] = acc_test 
 
-    return df, model
+    return df, model, best_weight, best_accuracy
 
 def check_network_type(input):
     int_value = int(input)
@@ -187,7 +194,7 @@ def parse_argument():
     parser.add_argument('-b', type=int, default=64, help='Batch size')
     parser.add_argument('-l', type=float, default=1e-2, help='Learning rate')
     parser.add_argument('-e', type=int, default=300, help='Number of epoch') 
-    parser.add_argument('-i', type=int, default=50, help='Print every i epochs')
+    parser.add_argument('-i', type=int, default=10, help='Print every i epochs')
     parser.add_argument('-n', type=check_network_type, default=0, help='Netweok type, 0: DeepConvNet, 1: EEGNet')
     parser.add_argument('-w', type=float, default=0, help='optimizer weight decay')
     return parser.parse_args()
@@ -214,9 +221,13 @@ def main():
 
     activation_dict = {'ReLU': nn.ReLU(), 'LeakyReLU': nn.LeakyReLU(), 'ELU': nn.ELU()}
 
-    df, model = run_model(train_dataloader, test_dataloader, activation_dict, device)
-    model_scripted = torch.jit.script(model)
-    model_scripted.save(f"output/{model.__class__.__name__}/scripted_lr.pt")
+    df, model, best_weight, best_accuracy = run_model(train_dataloader, test_dataloader, activation_dict, device)
+    for name, weight in best_weight.items():
+        torch.save(weight, f"output/{model.__class__.__name__}/model/{name}.pt")
+    
+    for name, accuracy in best_accuracy.items():
+        print(f"{name}: {accuracy}")
+
     df.set_index('Epoch', inplace=True)
 
     df.to_csv(f'output/{model.__class__.__name__}/accuracy_lr.csv')
