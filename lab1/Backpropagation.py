@@ -295,7 +295,7 @@ class NeuralNetwork:
         plt.ylabel('Loss')
 
 def main():
-    Data = DataGenerator('XOR')
+    Data = DataGenerator('Linear')
     x_train, y_train= Data.get_data(1000)
     x_test, y_test = Data.get_data(100) 
 
@@ -326,3 +326,4 @@ def main():
     NeuralNetwork.show_result(x_test, y_test, test_pred)
 if __name__ == '__main__':
     main()
+# %%

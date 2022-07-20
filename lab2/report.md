@@ -43,7 +43,7 @@ A. The highest testing accuracy
     | DeepConvNet | 81.94% | 83.70% | 80.00% |
 
 * Anything you want to present
-    一開始 batch size 設為 64，跑出來最好的 test accuracy 大約只有 84% 左右，之後加大batch size 後， test accuracy 也跟著上升。  
+    一開始 batch size 設為 64，跑出來最好的 test accuracy 大約只有 84% 左右，之後加大 batch size 為 540 後， test accuracy 也跟著上升至 87% 左右，不過再加大至 1080 (full batch) 時，test accuracy 反而會下降至 85% 左右，可能跟大的 batch size 容易陷入 sharp minima 有關。
 
 B. Comparison figures
 * EEGNet
