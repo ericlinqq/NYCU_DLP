@@ -1,4 +1,5 @@
-from ResNet import ResNet, train
+from ResNet import ResNet
+from train import train
 from torchvision import transforms
 from dataloader import RetinopathyLoader
 from torch.utils.data import DataLoader
