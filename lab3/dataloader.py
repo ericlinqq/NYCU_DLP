@@ -5,7 +5,6 @@ import os
 from torchvision import transforms
 from PIL import Image
 
-
 def getData(mode):
     if mode == 'train':
         img = pd.read_csv('train_img.csv')

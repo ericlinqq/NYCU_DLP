@@ -2,10 +2,9 @@ import torch.nn as nn
 from torchvision.models import resnet18, resnet50
 
 class ResNet(nn.Module):
+    input_size = 224
     def __init__(self, num_classes=5, net_type=18, weights=None, feature_extract=False):
         super(ResNet, self).__init__()
-
-        input_size = 224
 
         self.feature_extract = feature_extract
         

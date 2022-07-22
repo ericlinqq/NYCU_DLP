@@ -38,7 +38,7 @@ def main():
     pretrained_model = ResNet(num_classes=num_classes, net_type=net_type, weights=weights, feature_extract=feature_extract)
     random_init_model = ResNet(num_classes=num_classes, net_type=net_type, weights=None, feature_extract=False)
 
-    df = pd.Datafrme()
+    df = pd.DataFrame()
     df['Epoch'] = range(1, num_epochs+1)
 
     for model in [pretrained_model, random_init_model]:
