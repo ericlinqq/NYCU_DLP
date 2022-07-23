@@ -7,8 +7,8 @@ def train(model, dataloaders, criterion, optimizer, num_epochs, device):
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    train_acc_history = []
-    test_acc_history = []
+    train_acc_history = list()
+    test_acc_history = list()
 
     for epoch in range(1, num_epochs+1):
         print(f"Epoch {epoch}/{num_epochs}")
@@ -43,7 +43,7 @@ def train(model, dataloaders, criterion, optimizer, num_epochs, device):
                 running_corrects += torch.sum(pred == labels.data)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            epoch_acc = (running_corrects.double() / len(dataloaders[phase].dataset)).item()
 
             print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
 
@@ -59,7 +59,7 @@ def train(model, dataloaders, criterion, optimizer, num_epochs, device):
         print()
 
     time_elapsed = time.time() - since
-    print(f"Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}")
+    print(f"Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s")
     print(f"Best Test Acc: {best_acc:.4f}")
 
     model.load_state_dict(best_model_wts) 

@@ -64,7 +64,7 @@ def main():
         criterion = nn.CrossEntropyLoss()
 
         model, train_acc_history, test_acc_history = train(model, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, device=device)
-
+        
         model_scripted = torch.jit.script(model)
         model_scripted.save(f'model/ResNet{model.net_type}/{model.mode}.pt')
 
