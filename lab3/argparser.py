@@ -15,8 +15,8 @@ def parse_argument():
 
 def check_network_type(input):
     int_value = int(input)
-
-    if input != 18 and input != 50:
+    
+    if int_value != 18 and int_value != 50:
         raise argparse.ArgumentTypeError(f"Network type should be 18 or 50")
     
     return int_value
