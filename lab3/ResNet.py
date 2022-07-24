@@ -20,7 +20,7 @@ class ResNet(nn.Module):
         else:
             self.model = resnet18(weights=weights)
         
-        set_paramete_require_grad(self.model, self.feature_extract)
+        set_parameter_require_grad(self.model, self.feature_extract)
         self.num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Linear(self.num_ftrs, num_classes)
     
@@ -29,7 +29,7 @@ class ResNet(nn.Module):
 
         return x
 
-def set_paramete_require_grad(model, feature_extracting):
+def set_parameter_require_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
-            param.require_grad = False
+            param.requires_grad = False
