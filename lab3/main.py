@@ -86,8 +86,8 @@ def train(model, dataloaders, criterion, optimizer, num_epochs, device):
 
     return model, train_acc_history, test_acc_history
 
-def evaluate(model, test_dataloader, device, cm=True):
-    if cm:
+def evaluate(model, test_dataloader, device, confusion_matrix=True):
+    if confusion_matrix:
         cm = np.zeros([num_classes, num_classes])
     running_corrects = 0
     model.eval()
@@ -100,12 +100,12 @@ def evaluate(model, test_dataloader, device, cm=True):
             _, pred = torch.max(outputs, 1)
 
             running_corrects += torch.sum(pred == labels.data)
-            if cm:
+            if confusion_matrix:
                 for i in range(len(labels)):
                     cm[int(labels.data[i])][int(pred[i])] += 1
 
     accuracy = (running_corrects.double() / len(test_dataloader.dataset)).item()
-    if cm:
+    if confusion_matrix:
         cm /= cm.sum(axis=1).reshape(num_classes, 1)
         return accuracy, cm
 
