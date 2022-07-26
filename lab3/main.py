@@ -146,19 +146,19 @@ def main():
         
         name = model.mode.replace("/", "")
         
-        model_scripted.save(f"model/ResNet{model.net_type}/model({name}).pt")
+        model_scripted.save(f"model/ResNet{model.net_type}/model({name})_cw.pt")
 
         plt.figure()
         disp = ConfusionMatrixDisplay(confusion_matrix=cm)
         disp.plot()
-        plt.savefig(f"output/ResNet{model.net_type}/confusion_matrix({name}).png")
+        plt.savefig(f"output/ResNet{model.net_type}/confusion_matrix({name})_cw.png")
         plt.close()
 
         df[f'Train({model.mode})'] = train_acc_history
         df[f'Test({model.mode})'] = test_acc_history
 
     df.set_index('Epoch', inplace=True)
-    df.to_csv(f'output/ResNet{model.net_type}/accuracy.csv')
+    df.to_csv(f'output/ResNet{model.net_type}/accuracy_cw.csv')
     plt.figure()
     df.plot(title=f'Result Comparison (ResNet{model.net_type})', 
             xlabel='Epochs',
@@ -166,7 +166,7 @@ def main():
             legend=True,
             figsize=(10, 5)
     )
-    plt.savefig(f"output/ResNet{model.net_type}/comparison.png")
+    plt.savefig(f"output/ResNet{model.net_type}/comparison_cw.png")
     plt.close()
 
 def parse_argument():
@@ -222,6 +222,6 @@ if __name__ == '__main__':
         class_weights = class_weights.to(device)
     else:
         class_weights = None
-        
+
 
     main()
