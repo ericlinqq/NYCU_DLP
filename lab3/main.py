@@ -124,9 +124,6 @@ def main():
 
     dataloaders_dict = {x: DataLoader(image_dataset[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'test']}
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using {device} device.")
-
     pretrained_model = ResNet(num_classes=num_classes, net_type=net_type, weights=weights, feature_extract=feature_extract)
     random_init_model = ResNet(num_classes=num_classes, net_type=net_type, weights=None, feature_extract=False)
 
@@ -139,8 +136,7 @@ def main():
         
         params_to_update = params_to_learn(model, feature_extract)
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum, weight_decay=weight_decay)
-
-        class_weights = [0.2649, 0.9304, 0.8502, 0.9752, 0.9793]
+        
         criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         model, train_acc_history, test_acc_history = train(model, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, device=device)
@@ -184,6 +180,7 @@ def parse_argument():
     parser.add_argument('-l', type=float, default=1e-3, help='Learning rate, default: 1e-3')
     parser.add_argument('-m', type=float, default=0.9, help='Momentum, default: 0.9')
     parser.add_argument('-w', type=float, default=5e-4, help='Weight decay, default: 5e-4')
+    parser.add_argument('-wl', type=bool, default=False, help='Class-weighted loss, default: False')
     
     return parser.parse_args()
 
@@ -196,6 +193,13 @@ def check_network_type(input):
     return int_value
 
 if __name__ == '__main__':
+
+    print(f"Pytorch version: {torch.__version__}")
+    print(f"Torchvision version: {torchvision.__version__}")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device} device.")
+
     args = parse_argument()
     batch_size = args.b
     num_classes = args.c
@@ -206,12 +210,18 @@ if __name__ == '__main__':
     lr = args.l
     momentum = args.m
     weight_decay = args.w
+    weighted_loss = args.wl
 
     if net_type == 18:
         weights = ResNet18_Weights.DEFAULT
     else:
         weights = ResNet50_Weights.DEFAULT
-    
-    print(f"Pytorch version: {torch.__version__}")
-    print(f"Torchvision version: {torchvision.__version__}")
+
+    if weighted_loss:
+        class_weights = torch.tensor([0.2649, 0.9304, 0.8502, 0.9752, 0.9793])
+        class_weights = class_weights.to(device)
+    else:
+        class_weights = None
+        
+
     main()
