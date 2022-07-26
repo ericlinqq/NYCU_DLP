@@ -24,7 +24,7 @@ def main():
     
     accuracy = evaluate(model, test_dataloader, device, False)
 
-    print(accuracy)
+    print(f"Accuracy: {accuracy:.2f}%")
 
 if __name__ == '__main__':
     print(f"Pytorch version: {torch.__version__}")

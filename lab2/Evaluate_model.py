@@ -17,8 +17,9 @@ def main():
     model.to(device)
     print(model)
 
-    return test(test_dataloader, model, device)
+    accuracy = test(test_dataloader, model, device)
+    print(f"Accuracy: {accuracy:.2f}%")
 
 if __name__ == '__main__':
-    accuracy = main() 
-    print(accuracy)
+    print(f"Pytorch version: {torch.__version__}")
+    main()
