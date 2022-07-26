@@ -20,9 +20,9 @@ def main():
 
     test_dataset = RetinopathyLoader('data/', 'test', data_transform)
 
-    test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=4)
+    test_dataloader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=4)
     
-    accuracy, _ = evaluate(model, test_dataloader, device)
+    accuracy = evaluate(model, test_dataloader, device, False)
 
     print(accuracy)
 
