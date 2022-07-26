@@ -140,7 +140,8 @@ def main():
         params_to_update = params_to_learn(model, feature_extract)
         optimizer = optim.SGD(params_to_update, lr=lr, momentum=momentum, weight_decay=weight_decay)
 
-        criterion = nn.CrossEntropyLoss()
+        class_weights = [0.2649, 0.9304, 0.8502, 0.9752, 0.9793]
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         model, train_acc_history, test_acc_history = train(model, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, device=device)
         _, cm = evaluate(model, dataloaders_dict['test'], device, True)
