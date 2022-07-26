@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import argparse
 import time
 import copy
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import ConfusionMatrixDisplay
 import numpy as np
 
 def train(model, dataloaders, criterion, optimizer, num_epochs, device):
@@ -86,8 +86,9 @@ def train(model, dataloaders, criterion, optimizer, num_epochs, device):
 
     return model, train_acc_history, test_acc_history
 
-def evaluate(model, test_dataloader, device):
-    cm = np.zeros([num_classes, num_classes])
+def evaluate(model, test_dataloader, device, cm=True):
+    if cm:
+        cm = np.zeros([num_classes, num_classes])
     running_corrects = 0
     model.eval()
 
@@ -99,13 +100,16 @@ def evaluate(model, test_dataloader, device):
             _, pred = torch.max(outputs, 1)
 
             running_corrects += torch.sum(pred == labels.data)
-            for i in range(len(labels)):
-                cm[int(labels.data[i])][int(pred[i])] += 1
+            if cm:
+                for i in range(len(labels)):
+                    cm[int(labels.data[i])][int(pred[i])] += 1
 
     accuracy = (running_corrects.double() / len(test_dataloader.dataset)).item()
-    cm /= cm.sum(axis=1).reshape(num_classes, 1)
+    if cm:
+        cm /= cm.sum(axis=1).reshape(num_classes, 1)
+        return accuracy, cm
 
-    return accuracy, cm
+    return accuracy
 
 def main():
     data_transform = transforms.Compose([
@@ -139,7 +143,7 @@ def main():
         criterion = nn.CrossEntropyLoss()
 
         model, train_acc_history, test_acc_history = train(model, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, device=device)
-        _, cm = evaluate(model, dataloaders_dict['test'], device)
+        _, cm = evaluate(model, dataloaders_dict['test'], device, True)
 
         model_scripted = torch.jit.script(model)
         
