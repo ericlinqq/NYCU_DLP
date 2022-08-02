@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 
 class lstm(nn.Module):
     def __init__(self, input_size, output_size, hidden_size, n_layers, batch_size, device):
@@ -22,12 +21,12 @@ class lstm(nn.Module):
     def init_hidden(self):
         hidden = []
         for _ in range(self.n_layers):
-            hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
-                           Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
+            hidden.append((torch.zeros(self.batch_size, self.hidden_size).to(self.device),
+                            torch.zeros(self.batch_size, self.hidden_size).to(self.device)))
         return hidden
 
     def forward(self, input):
-        embedded = self.embed(input)
+        embedded = self.embed(input.view(-1, self.input_size))
         h_in = embedded
         for i in range(self.n_layers):
             self.hidden[i] = self.lstm[i](h_in, self.hidden[i])
@@ -53,12 +52,14 @@ class gaussian_lstm(nn.Module):
     def init_hidden(self):
         hidden = []
         for _ in range(self.n_layers):
-            hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
-                           Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
+            hidden.append((torch.zeros(self.batch_size, self.hidden_size).to(self.device),
+                            torch.zeros(self.batch_size, self.hidden_size).to(self.device)))
         return hidden
 
     def reparameterize(self, mu, logvar):
-        raise NotImplementedError
+        logvar = logvar.mul(0.5).exp_()
+        eps = logvar.detach().new(logvar.size()).normal_()
+        return eps.mul(logvar).add_(mu)
 
     def forward(self, input):
         embedded = self.embed(input)

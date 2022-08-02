@@ -2,16 +2,16 @@ import torch
 import torch.nn as nn
 
 class vgg_layer(nn.Module):
-    def __init__(self, nin, nout):
-        super(vgg_layer, self).__init__()
-        self.main = nn.Sequential(
+	def __init__(self, nin, nout):
+		super(vgg_layer, self).__init__()
+		self.main = nn.Sequential(
                 nn.Conv2d(nin, nout, 3, 1, 1),
                 nn.BatchNorm2d(nout),
                 nn.LeakyReLU(0.2, inplace=True)
                 )
 
-    def forward(self, input):
-        return self.main(input)
+	def forward(self, input):
+		return self.main(input)
 
 class vgg_encoder(nn.Module):
     def __init__(self, dim):
