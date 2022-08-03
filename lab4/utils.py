@@ -9,7 +9,9 @@ from scipy import signal
 from skimage.metrics import peak_signal_noise_ratio as psnr_metric
 from skimage.metrics import structural_similarity as ssim_metric
 from torchvision import transforms
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
+import random
+from skimage.util import img_as_ubyte
 
 
 def kl_criterion(mu, logvar, args):
@@ -114,6 +116,70 @@ def init_weights(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
+def is_sequence(arg):
+    return (not hasattr(arg, "strip") and
+            not type(arg) is np.ndarray and
+            not hasattr(arg, "dot") and
+            (hasattr(arg, "__getitem__") or
+            hasattr(arg, "__iter__")))
+
+def image_tensor(inputs, padding=1):
+    # assert is_sequence(inputs)
+    assert len(inputs) > 0
+    # print(inputs)
+
+    # if this is a list of lists, unpack them all and grid them up
+    if is_sequence(inputs[0]) or (hasattr(inputs, "dim") and inputs.dim() > 4):
+        images = [image_tensor(x) for x in inputs]
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim * len(images) + padding * (len(images)-1),
+                            y_dim)
+        for i, image in enumerate(images):
+            result[:, i * x_dim + i * padding :
+                   (i+1) * x_dim + i * padding, :].copy_(image)
+
+        return result
+
+    # if this is just a list, make a stacked image
+    else:
+        images = [x.data if isinstance(x, torch.autograd.Variable) else x
+                    for x in inputs]
+        # print(images)
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim,
+                            y_dim * len(images) + padding * (len(images)-1))
+        for i, image in enumerate(images):
+            result[:, :, i * y_dim + i * padding :
+                   (i+1) * y_dim + i * padding].copy_(image)
+        return result
+
+def save_gif(filename, inputs, duration=0.25):
+    images = []
+    for tensor in inputs:
+        img = image_tensor(tensor, padding=0)
+        img = img.cpu()
+        img = img.transpose(0,1).transpose(1,2).clamp(0,1)
+        images.append(img_as_ubyte(img.numpy()))
+    imageio.mimsave(filename, images, duration=duration)
+
 def plot_pred(x, cond, modules, epoch, args, device):
     modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
     modules['posterior'].hidden = modules['posterior'].init_hidden()
@@ -130,7 +196,7 @@ def plot_pred(x, cond, modules, epoch, args, device):
         if i < args.n_past:
             h_target, _ = modules['encoder'](x[i])
             z_t, _, _ = modules['posterior'](h_target)
-            modules['frame_predictor'](torch.cat([cond[i-1], h_target, z_t], 1))
+            modules['frame_predictor'](torch.cat([cond[i-1], h, z_t], 1))
             x_pred = x[i]
         else:
             z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
@@ -139,26 +205,18 @@ def plot_pred(x, cond, modules, epoch, args, device):
         
         pred_seq.append(x_pred)
     
-    to_plot = []
+    pred_plot = []
+    gt_plot = []
     gif = [[] for t in range(args.n_eval)]
-    nrow = min(args.batch_size, 12)
-    for i in range(nrow):
-        row = []
-        for t in range(args.n_eval):
-            row.append(gt_seq[t][i])
-        to_plot.append(torch.tensor(row))
-        
-        row = []
-        for t in range(args.n_eval):
-            row.append(pred_seq[t][i])
-        to_plot.append(torch.tensor(row))
 
-        for t in range(args.n_eval):
-            row = []
-            row.append(gt_seq[t][i])
-            row.append(pred_seq[t][i])
-            gif[t].append(torch.tensor(row))
+    i = random.randint(0, args.batch_size-1)
+    for t in range(args.n_eval):
+        pred_plot.append(pred_seq[t][i])
+        gt_plot.append(gt_seq[t][i])
+        gif[t].append(gt_seq[t][i])
+        gif[t].append(pred_seq[t][i])
 
     fname = f'{args.log_dir}/gen/sample_{epoch}'
-    save_image(to_plot, fname+'.png')
-    imageio.mimsave(fname+'.gif', gif, duration=0.25)
+    save_image(make_grid(pred_plot, nrow=args.n_eval), fname+'_pred.png')
+    save_image(make_grid(gt_plot, nrow=args.n_eval), fname+'_gt.png')
+    save_gif(fname+'.gif', gif, duration=0.25)
