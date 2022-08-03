@@ -121,7 +121,7 @@ def plot_pred(x, cond, modules, epoch, args, device):
     gt_seq = [x[i] for i in range(len(x))]
     x_pred = x[0]
     
-    for i in range(1, args.n_val):
+    for i in range(1, args.n_eval):
         h = modules['encoder'](x_pred)
         if args.last_frame_skip or i < args.n_past:
             h, skip = h

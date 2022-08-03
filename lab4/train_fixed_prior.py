@@ -2,8 +2,6 @@ import argparse
 import itertools
 import os
 import random
-from this import d
-from matplotlib.pyplot import step
 
 import numpy as np
 import torch
@@ -18,6 +16,8 @@ from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
 from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq
+
+torch.backends.cudnn.benchmark = True
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -152,7 +152,6 @@ def main():
     if args.cuda:
         assert torch.cuda.is_available(), 'CUDA is not available.'
         device = torch.device('cuda')
-        torch.backends.cudnn.benchmark = True
     else:
         device = torch.device('cpu')
     print(f"Using {device} device")
@@ -319,8 +318,8 @@ def main():
                     validate_seq, validate_cond = next(validate_iterator)
 
                 validate_seq, validate_cond = validate_seq.transpose_(0, 1).to(device), validate_cond.transpose_(0, 1).to(device)
-
-                pred_seq = pred(validate_seq, validate_cond, modules, args, device)
+                with torch.no_grad():
+                    pred_seq = pred(validate_seq, validate_cond, modules, args, device)
                 _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
                 psnr_list.append(psnr)
                 
@@ -350,7 +349,8 @@ def main():
                 validate_seq, validate_cond = next(validate_iterator)
 
             validate_seq, validate_cond = validate_seq.transpose_(0, 1).to(device), validate_cond.transpose_(0, 1).to(device)
-            plot_pred(validate_seq, validate_cond, modules, epoch, args)
+            with torch.no_grad():
+                plot_pred(validate_seq, validate_cond, modules, epoch, args, device)
 
 if __name__ == '__main__':
     print(f"Pytorch version: {torch.__version__}")
