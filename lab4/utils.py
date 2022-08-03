@@ -140,17 +140,24 @@ def plot_pred(x, cond, modules, epoch, args, device):
         pred_seq.append(x_pred)
     
     to_plot = []
-    gif = []
+    gif = [[] for t in range(args.n_eval)]
     nrow = min(args.batch_size, 12)
     for i in range(nrow):
-        plot_row = []
-        gif_row = []
+        row = []
         for t in range(args.n_eval):
-            plot_row.append(pred_seq[t][i])
-            gif_row.append(gt_seq[t][i])
+            row.append(gt_seq[t][i])
+        to_plot.append(torch.tensor(row))
+        
+        row = []
+        for t in range(args.n_eval):
+            row.append(pred_seq[t][i])
+        to_plot.append(torch.tensor(row))
 
-        to_plot.append(plot_row)
-        gif.append(gif_row)
+        for t in range(args.n_eval):
+            row = []
+            row.append(gt_seq[t][i])
+            row.append(pred_seq[t][i])
+            gif[t].append(torch.tensor(row))
 
     fname = f'{args.log_dir}/gen/sample_{epoch}'
     save_image(to_plot, fname+'.png')
