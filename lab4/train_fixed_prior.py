@@ -72,7 +72,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
 
     for i in range(1, args.n_past + args.n_future):
         h  = modules['encoder'](x[i-1])
-        h_target = modules['encoder'](x[i])[0]
+        h_target, _ = modules['encoder'](x[i])
 
         if args.last_frame_skip or i < args.n_past:
             h, skip = h

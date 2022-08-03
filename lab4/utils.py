@@ -128,7 +128,7 @@ def plot_pred(x, cond, modules, epoch, args, device):
         else:
             h, _ = h
         if i < args.n_past:
-            h_target = modules['encoder'](x[i])
+            h_target, _ = modules['encoder'](x[i])
             z_t, _, _ = modules['posterior'](h_target)
             modules['frame_predictor'](torch.cat([cond[i-1], h_target, z_t], 1))
             x_pred = x[i]
