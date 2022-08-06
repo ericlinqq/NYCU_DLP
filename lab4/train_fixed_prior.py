@@ -70,8 +70,9 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
     use_teacher_forcing = True if random.random() < args.tfr else False
     mse_criterion = nn.MSELoss()
     
+    x_pred = x[0]
     for i in range(1, args.n_past + args.n_future):
-        h  = modules['encoder'](x[i-1])
+        h  = modules['encoder'](x_pred)
         h_target, _ = modules['encoder'](x[i])
 
         if args.last_frame_skip or i < args.n_past:
@@ -80,7 +81,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
             h, _ = h
 
         z_t, mu, logvar = modules['posterior'](h_target)
-        h_pred = modules['frame_predictor'](torch.cat([cond[i-1], h, z_t], 1))
+        h_pred = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
 
         if use_teacher_forcing:
             x_pred = modules['decoder']([h_target, skip])
