@@ -69,7 +69,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
     mse_criterion = nn.MSELoss()
-
+    
     for i in range(1, args.n_past + args.n_future):
         h  = modules['encoder'](x[i-1])
         h_target, _ = modules['encoder'](x[i])
@@ -144,7 +144,6 @@ class kl_annealing():
 
     def get_beta(self):
         beta = self.L[self.idx]
-        self.update()
         return beta
 
 def main():
@@ -289,15 +288,10 @@ def main():
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
-        
+        kl_anneal.update()
         if epoch >= args.tfr_start_decay_epoch:
             ### Update teacher forcing ratio ###
-            if args.tfr > args.tfr_lower_bound:
-                tfr = args.tfr - args.tfr_decay_step
-                if  tfr >= args.tfr_lower_bound:
-                    args.tfr = tfr
-                else:
-                    args.tfr = args.tfr_lower_bound
+            args.tfr -= 1. / (args.niter - args.tfr_start_decay_epoch - 1)
 
         progress.update(1)
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:

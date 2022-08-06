@@ -36,7 +36,6 @@ class kl_annealing():
 
 def main():
     args = parse_args()
-    args.niter = 100
     kla = kl_annealing(args)
     for i in range(args.niter):
         print(i, kla.get_beta())
