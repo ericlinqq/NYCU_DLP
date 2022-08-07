@@ -196,11 +196,11 @@ def plot_pred(x, cond, modules, epoch, args, device):
         if i < args.n_past:
             h_target, _ = modules['encoder'](x[i])
             z_t, _, _ = modules['posterior'](h_target)
-            modules['frame_predictor'](torch.cat([cond[i-1], h, z_t], 1))
+            modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
             x_pred = x[i]
         else:
             z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
-            h = modules['frame_predictor'](torch.cat([cond[i-1], h, z_t], 1))
+            h = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
             x_pred = modules['decoder']([h, skip])
         
         pred_seq.append(x_pred)
