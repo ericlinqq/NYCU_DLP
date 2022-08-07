@@ -71,22 +71,22 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
     mse_criterion = nn.MSELoss()
     
     x_pred = x[0]
-    for i in range(1, args.n_past + args.n_future):
-        h  = modules['encoder'](x_pred)
+    for i in range(1, args.n_past + args.n_future): 
         h_target, _ = modules['encoder'](x[i])
+
+        if use_teacher_forcing:
+            h = modules['encoder'](x[i-1])
+        else:
+            h  = modules['encoder'](x_pred)
 
         if args.last_frame_skip or i < args.n_past:
             h, skip = h
         else:
             h, _ = h
-
+        
         z_t, mu, logvar = modules['posterior'](h_target)
         h_pred = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
-
-        if use_teacher_forcing:
-            x_pred = modules['decoder']([h_target, skip])
-        else:
-            x_pred = modules['decoder']([h_pred, skip])
+        x_pred = modules['decoder']([h_pred, skip])
 
         mse += mse_criterion(x_pred, x[i])
         kld += kl_criterion(mu, logvar, args)
