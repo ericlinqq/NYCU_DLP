@@ -17,43 +17,59 @@
 The derivation of the CVAE objective function:  
 To determine $\theta$, we would intuitively hop to maximize $p(X|c;\theta)$  
 
-$$ p(X|c;\theta) = \int p(X|Z,c;\theta) p(Z|c)dZ $$
+$$ p(X|c;\theta) = \int p(X|Z,c;\theta) p(Z|c)dZ $$  
 
 This however becomes difficult since the integration over $Z$ would have no closed-form solution when $p(X|Z,c;\theta)$ is modeled by a neural network.  
 
 By the chain rule of probability, we know:  
 
-$$ p(X,Z|c;\theta) = p(X|c;\theta) p(Z|X,c;\theta) $$ 
-$$\implies \log p(X,Z|c;\theta) = \log p(X|c;\theta) + \log p(Z|X,c;\theta) $$
-$$ \implies \log p(X|c;\theta) = \log p(X,Z|c;\theta) - \log p(Z|X,c;\theta) $$
+$$ p(X,Z|c;\theta) = p(X|c;\theta) p(Z|X,c;\theta) $$   
+$$\implies \log p(X,Z|c;\theta) = \log p(X|c;\theta) + \log p(Z|X,c;\theta) $$  
+$$ \implies \log p(X|c;\theta) = \log p(X,Z|c;\theta) - \log p(Z|X,c;\theta) $$  
 
 We next intrduce an arbitrary distribution $q(Z)$ on both side and integrate over $Z$:  
 
-$$ \int q(Z)\log p(X|c;\theta)dZ = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$
-$$ = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ + \int q(Z) \log q(Z)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$
-$$ = \scr L \mit(X,c,q,\theta) + KL(q(Z)||(Z|X,c;\theta)) $$
+$$ \int q(Z)\log p(X|c;\theta)dZ = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$  
+
+$$ = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ + \int q(Z) \log q(Z)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$  
+
+$$ = \scr L \mit(X,c,q,\theta) + KL(q(Z)||(Z|X,c;\theta)) $$  
 
 where  
 
-$$ \scr L \mit(X,c,q,\theta) = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ $$
-$$ KL(q(Z)||(Z|X,c;\theta)) = \int q(Z) \log q(Z)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$
+$$ \scr L \mit(X,c,q,\theta) = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ $$  
+
+$$ KL(q(Z)||(Z|X,c;\theta)) = \int q(Z) \log q(Z)dZ - \int q(Z) \log p(Z|X,c;\theta)dZ $$  
+
 $$ \therefore \log p(X|c;\theta) = \scr L 
-\mit(X,c,q,\theta) + KL(q(Z)||p(Z|X,c;\theta)) $$
-$$ \implies \scr L \mit(X,c,q,\theta) = \log p(X|c;\theta) - KL(q(Z)||p(Z|X,c;\theta)) $$
+\mit(X,c,q,\theta) + KL(q(Z)||p(Z|X,c;\theta)) $$  
+
+$$ \implies \scr L \mit(X,c,q,\theta) = \log p(X|c;\theta) - KL(q(Z)||p(Z|X,c;\theta)) $$  
+
 
 Now, instead of directly maximizing the intractable $p(X|c;\theta)$, we attempt to maximize $\scr L \mit(X,c,q,\theta)$  
 
-$$ \because \scr L \mit(X,c,q,\theta) = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ $$
-$$ = \Bbb E_{Z \sim q(Z)}[\log p(X,Z|c;\theta)] - \Bbb E_{Z \sim q(Z)}[\log q(z)] $$
-$$ = \Bbb E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] + \Bbb E_{Z \sim q(Z)}[\log p(Z|c)] - \Bbb E_{Z \sim q(Z)}[\log q(z)] $$
-$$ = \Bbb E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z)||p(Z|c)) $$
-$$ \therefore \scr L \mit(X,c,q,\theta) = \Bbb  E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z)||p(Z|c)) $$
+$$ \because \scr L \mit(X,c,q,\theta) = \int q(Z)\log p(X,Z|c;\theta)dZ - \int q(Z) \log q(Z)dZ $$  
+
+$$ = \Bbb E_{Z \sim q(Z)}[\log p(X,Z|c;\theta)] - \Bbb E_{Z \sim q(Z)}[\log q(z)] $$  
+
+$$ = \Bbb E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] + \Bbb E_{Z \sim q(Z)}[\log p(Z|c)] - \Bbb E_{Z \sim q(Z)}[\log q(z)] $$  
+
+$$ = \Bbb E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z)||p(Z|c)) $$  
+
+$$ \therefore \scr L \mit(X,c,q,\theta) = \Bbb  E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z)||p(Z|c)) $$  
+
 
 Because the equality holds for any choice of $q(Z)$ , we introduce a distribution $q(Z|X;\theta^{\prime})$ modeled by another neural network with parameter $\theta^{\prime}$.  
+
 To maximize  
-$$ \scr L \mit(X,c,q,\theta) = \log p(X|c;\theta) - KL(q(Z|X;\theta^{\prime})||p(Z|X,c;\theta)) $$
+
+$$ \scr L \mit(X,c,q,\theta) = \log p(X|c;\theta) - KL(q(Z|X;\theta^{\prime})||p(Z|X,c;\theta)) $$  
+
 which amounts to maximizing  
-$$ \Bbb  E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z|X;\theta^{\prime})||p(Z|c))$$
+
+$$ \Bbb  E_{Z \sim q(Z)}[\log p(X|Z,c;\theta)] - KL(q(Z|X;\theta^{\prime})||p(Z|c))$$  
+
 
 
 ## 3. **Implementation details** 
