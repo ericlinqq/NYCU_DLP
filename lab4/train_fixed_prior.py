@@ -15,7 +15,7 @@ from tqdm import tqdm
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq
+from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, plot_curve
 
 torch.backends.cudnn.benchmark = True
 
@@ -98,7 +98,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
 
     optimizer.step()
 
-    return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
+    return beta, loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
 def pred(x, cond, modules, args, device):
     modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
@@ -172,6 +172,8 @@ def main():
         args.model_dir = model_dir
         args.log_dir = '%s/continued' % args.log_dir
         start_epoch = saved_model['last_epoch']
+        kl_anneal = saved_model['kl_anneal']
+        plot_record = saved_model['plot_record']
     else:
         name = 'rnn_size=%d-predictor-posterior-rnn_layers=%d-%d-n_past=%d-n_future=%d-lr=%.4f-g_dim=%d-z_dim=%d-last_frame_skip=%s-beta=%.7f'\
             % (args.rnn_size, args.predictor_rnn_layers, args.posterior_rnn_layers, args.n_past, args.n_future, args.lr, args.g_dim, args.z_dim, args.last_frame_skip, args.beta)
@@ -179,6 +181,8 @@ def main():
         args.log_dir = '%s/%s' % (args.log_dir, name)
         niter = args.niter
         start_epoch = 0
+        kl_anneal = kl_annealing(args)
+        plot_record = {"loss": [], "tfr": [], "KL_weight": [], "psnr": []}
 
     os.makedirs(args.log_dir, exist_ok=True)
     os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
@@ -254,7 +258,7 @@ def main():
 
     params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
     optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
-    kl_anneal = kl_annealing(args)
+
 
     modules = {
         'frame_predictor': frame_predictor,
@@ -266,6 +270,7 @@ def main():
 
     progress = tqdm(total=args.niter)
     best_val_psnr = 0
+    args.tfr_decay_step = 1. / (args.niter - args.tfr_start_decay_epoch - 1)
     for epoch in range(start_epoch, start_epoch + niter):
         frame_predictor.train()
         posterior.train()
@@ -285,14 +290,22 @@ def main():
 
             seq, cond = seq.transpose_(0, 1).to(device), cond.transpose_(0, 1).to(device)
 
-            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args)
+            beta, loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args)
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
+
+        plot_record['loss'].append(epoch_loss / args.epoch_size)
+        plot_record['KL_weight'].append(beta)
         kl_anneal.update()
+        plot_record['tfr'].append(args.tfr)
+
         if epoch >= args.tfr_start_decay_epoch:
             ### Update teacher forcing ratio ###
-            args.tfr -= 1. / (args.niter - args.tfr_start_decay_epoch - 1)
+            args.tfr -= args.tfr_decay_step
+            if args.tfr < args.tfr_lower_bound:
+                args.tfr = args.tfr_lower_bound
+            
 
         progress.update(1)
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -319,6 +332,7 @@ def main():
                 psnr_list.append(psnr)
                 
             ave_psnr = np.mean(np.concatenate(psnr))
+            plot_record['psnr'].append(ave_psnr)
 
 
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -333,7 +347,9 @@ def main():
                     'frame_predictor': frame_predictor,
                     'posterior': posterior,
                     'args': args,
-                    'last_epoch': epoch},
+                    'last_epoch': epoch,
+                    'kl_anneal': kl_anneal,
+                    'plot_record': plot_record},
                     '%s/model.pth' % args.log_dir)
 
         if epoch % 20 == 0:
@@ -346,7 +362,8 @@ def main():
             validate_seq, validate_cond = validate_seq.transpose_(0, 1).to(device), validate_cond.transpose_(0, 1).to(device)
             with torch.no_grad():
                 plot_pred(validate_seq, validate_cond, modules, epoch, args, device)
-
+    torch.save(plot_record, f"{args.log_dir}/records.pth")
+    plot_curve(plot_record, args.niter, f"{args.log_dir}/curve.png")
 if __name__ == '__main__':
     print(f"Pytorch version: {torch.__version__}")
     main()
