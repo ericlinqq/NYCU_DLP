@@ -182,11 +182,10 @@ def save_gif(filename, inputs, duration=0.25):
 
 def plot_pred(x, cond, modules, epoch, args, device):
     modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
-    modules['posterior'].hidden = modules['posterior'].init_hidden()
+    # modules['posterior'].hidden = modules['posterior'].init_hidden()
     pred_seq = [x[0]]
     gt_seq = [x[i] for i in range(len(x))]
     x_pred = x[0]
-    
     for i in range(1, args.n_eval):
         h = modules['encoder'](x_pred)
         if args.last_frame_skip or i < args.n_past:

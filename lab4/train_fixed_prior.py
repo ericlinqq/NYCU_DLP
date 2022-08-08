@@ -77,7 +77,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
         if use_teacher_forcing:
             h = modules['encoder'](x[i-1])
         else:
-            h  = modules['encoder'](x_pred)
+            h = modules['encoder'](x_pred)
 
         if args.last_frame_skip or i < args.n_past:
             h, skip = h
@@ -102,7 +102,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
 
 def pred(x, cond, modules, args, device):
     modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
-    modules['posterior'].hidden = modules['posterior'].init_hidden()
+    # modules['posterior'].hidden = modules['posterior'].init_hidden()
     pred_seq = [x[0]]
     x_pred = x[0]
     for i in range(1, args.n_eval):
