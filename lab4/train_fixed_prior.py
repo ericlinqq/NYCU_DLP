@@ -331,7 +331,7 @@ def main():
                 _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
                 psnr_list.append(psnr)
                 
-            ave_psnr = np.mean(np.concatenate(psnr))
+            ave_psnr = np.mean(np.concatenate(psnr_list))
             plot_record['psnr'].append(ave_psnr)
 
 
@@ -361,7 +361,7 @@ def main():
 
             validate_seq, validate_cond = validate_seq.transpose_(0, 1).to(device), validate_cond.transpose_(0, 1).to(device)
             with torch.no_grad():
-                plot_pred(validate_seq, validate_cond, modules, epoch, args, device)
+                _ = plot_pred(validate_seq, validate_cond, modules, epoch, args, device)
     torch.save(plot_record, f"{args.log_dir}/records.pth")
     plot_curve(plot_record, args.niter, f"{args.log_dir}/curve.png")
 if __name__ == '__main__':

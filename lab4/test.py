@@ -31,15 +31,17 @@ class kl_annealing():
 
     def get_beta(self):
         beta = self.L[self.idx]
-        self.update()
+        # self.update()
         return beta
 
 def main():
     args = parse_args()
     kla = kl_annealing(args)
-    for i in range(args.niter):
-        print(i, kla.get_beta())
-
+    # for i in range(args.niter):
+    #     print(i, kla.get_beta())
+    print(kla.get_beta())
+    kla.update()
+    print(kla.get_beta())
 if __name__ == '__main__':
     main()
     

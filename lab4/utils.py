@@ -12,6 +12,7 @@ from torchvision import transforms
 from torchvision.utils import save_image, make_grid
 import random
 from skimage.util import img_as_ubyte
+from train_fixed_prior import pred
 
 
 def kl_criterion(mu, logvar, args):
@@ -181,29 +182,9 @@ def save_gif(filename, inputs, duration=0.25):
     imageio.mimsave(filename, images, duration=duration)
 
 def plot_pred(x, cond, modules, epoch, args, device):
-    modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
-    # modules['posterior'].hidden = modules['posterior'].init_hidden()
-    pred_seq = [x[0]]
     gt_seq = [x[i] for i in range(len(x))]
-    x_pred = x[0]
-    for i in range(1, args.n_eval):
-        h = modules['encoder'](x_pred)
-        if args.last_frame_skip or i < args.n_past:
-            h, skip = h
-        else:
-            h, _ = h
-        if i < args.n_past:
-            h_target, _ = modules['encoder'](x[i])
-            z_t, _, _ = modules['posterior'](h_target)
-            modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
-            x_pred = x[i]
-        else:
-            z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
-            h = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
-            x_pred = modules['decoder']([h, skip])
-        
-        pred_seq.append(x_pred)
-    
+    pred_seq = pred(x, cond, modules, args, device)
+
     pred_plot = []
     gt_plot = []
     gif = [[] for t in range(args.n_eval)]
@@ -219,6 +200,8 @@ def plot_pred(x, cond, modules, epoch, args, device):
     save_image(make_grid(pred_plot, nrow=args.n_eval), fname+'_pred.png')
     save_image(make_grid(gt_plot, nrow=args.n_eval), fname+'_gt.png')
     save_gif(fname+'.gif', gif, duration=0.25)
+
+    return pred_seq
 
 def plot_curve(rec_dict, epoch, path, step = 5):
     epochs = np.arange(epoch)
