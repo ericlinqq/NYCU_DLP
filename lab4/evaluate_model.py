@@ -1,5 +1,5 @@
-from train_fixed_prior import pred
-from utils import plot_pred, finn_eval_seq
+from train_fixed_prior import plot_pred
+from utils import finn_eval_seq
 from dataset import bair_robot_pushing_dataset
 import torch
 from torch.utils.data import DataLoader

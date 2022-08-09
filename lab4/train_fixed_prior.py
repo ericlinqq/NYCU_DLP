@@ -15,7 +15,8 @@ from tqdm import tqdm
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, plot_curve
+from utils import init_weights, kl_criterion, finn_eval_seq, plot_curve, save_gif
+from torchvision.utils import save_image, make_grid
 
 torch.backends.cudnn.benchmark = True
 
@@ -122,6 +123,28 @@ def pred(x, cond, modules, args, device):
             h = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
             x_pred = modules['decoder']([h, skip])
         pred_seq.append(x_pred) 
+
+    return pred_seq
+
+def plot_pred(x, cond, modules, epoch, args, device):
+    gt_seq = [x[i] for i in range(len(x))]
+    pred_seq = pred(x, cond, modules, args, device)
+
+    pred_plot = []
+    gt_plot = []
+    gif = [[] for t in range(args.n_eval)]
+
+    i = random.randint(0, args.batch_size-1)
+    for t in range(args.n_eval):
+        pred_plot.append(pred_seq[t][i])
+        gt_plot.append(gt_seq[t][i])
+        gif[t].append(gt_seq[t][i])
+        gif[t].append(pred_seq[t][i])
+
+    fname = f'{args.log_dir}/gen/sample_{epoch}'
+    save_image(make_grid(pred_plot, nrow=args.n_eval), fname+'_pred.png')
+    save_image(make_grid(gt_plot, nrow=args.n_eval), fname+'_gt.png')
+    save_gif(fname+'.gif', gif, duration=0.25)
 
     return pred_seq
 

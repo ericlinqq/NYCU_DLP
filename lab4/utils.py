@@ -9,10 +9,8 @@ from scipy import signal
 from skimage.metrics import peak_signal_noise_ratio as psnr_metric
 from skimage.metrics import structural_similarity as ssim_metric
 from torchvision import transforms
-from torchvision.utils import save_image, make_grid
 import random
 from skimage.util import img_as_ubyte
-from train_fixed_prior import pred
 
 
 def kl_criterion(mu, logvar, args):
@@ -180,28 +178,6 @@ def save_gif(filename, inputs, duration=0.25):
         img = img.transpose(0,1).transpose(1,2).clamp(0,1)
         images.append(img_as_ubyte(img.numpy()))
     imageio.mimsave(filename, images, duration=duration)
-
-def plot_pred(x, cond, modules, epoch, args, device):
-    gt_seq = [x[i] for i in range(len(x))]
-    pred_seq = pred(x, cond, modules, args, device)
-
-    pred_plot = []
-    gt_plot = []
-    gif = [[] for t in range(args.n_eval)]
-
-    i = random.randint(0, args.batch_size-1)
-    for t in range(args.n_eval):
-        pred_plot.append(pred_seq[t][i])
-        gt_plot.append(gt_seq[t][i])
-        gif[t].append(gt_seq[t][i])
-        gif[t].append(pred_seq[t][i])
-
-    fname = f'{args.log_dir}/gen/sample_{epoch}'
-    save_image(make_grid(pred_plot, nrow=args.n_eval), fname+'_pred.png')
-    save_image(make_grid(gt_plot, nrow=args.n_eval), fname+'_gt.png')
-    save_gif(fname+'.gif', gif, duration=0.25)
-
-    return pred_seq
 
 def plot_curve(rec_dict, epoch, path, step = 5):
     epochs = np.arange(epoch)
