@@ -127,6 +127,8 @@ def pred(x, cond, modules, args, device):
 
 class kl_annealing():
     def __init__(self, args):
+        if not args.kl_anneal_cyclical:
+            args.kl_anneal_cycle = 1 
         period = args.niter / args.kl_anneal_cycle
         step = 1. / (period * args.kl_anneal_ratio)
         self.L = np.ones(args.niter)
