@@ -1,4 +1,4 @@
-from train_fixed_prior import plot_pred
+from train_fixed_prior import plot_pred, kl_annealing, parse_args
 from utils import finn_eval_seq
 from dataset import bair_robot_pushing_dataset
 import torch
@@ -8,23 +8,10 @@ import argparse
 
 torch.backends.cudnn.benchmark = True
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
-    parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default='./data/processed_data', help='root directory for data')
-    parser.add_argument('--seed', default=1, type=int, help='manual seed')
-    parser.add_argument('--n_past', type=int, default=2, help='number of frames to condition on')
-    parser.add_argument('--n_future', type=int, default=10, help='number of frames to predict')
-    parser.add_argument('--n_eval', type=int, default=30, help='number of frames to predict at eval time')
-    parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
-
-    args = parser.parse_args()
-    return args
-
 def main():
     args = parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using {device} device.")
     test_data = bair_robot_pushing_dataset(args, 'test')
     test_loader = DataLoader(test_data,
                             num_workers=args.num_workers,
@@ -61,7 +48,7 @@ def main():
         psnr_list.append(psnr)
 
     ave_psnr = np.mean(np.concatenate(psnr_list))
-    print(f"PSNR: {ave_psnr}")
+    print(f"PSNR: {ave_psnr:.3f}")
 
 if __name__ == '__main__':
     print(f"Torch version: {torch.__version__}")
