@@ -37,11 +37,9 @@ class kl_annealing():
 def main():
     args = parse_args()
     kla = kl_annealing(args)
-    # for i in range(args.niter):
-    #     print(i, kla.get_beta())
-    print(kla.get_beta())
-    kla.update()
-    print(kla.get_beta())
+    for i in range(args.niter):
+        print(i, kla.get_beta())
+        kla.update()
 if __name__ == '__main__':
     main()
     

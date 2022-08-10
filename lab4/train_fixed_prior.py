@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -207,7 +206,7 @@ def main():
         niter = args.niter
         start_epoch = 0
         kl_anneal = kl_annealing(args)
-        plot_record = {"loss": [], "tfr": [], "KL_weight": [], "psnr": []}
+        plot_record = {"loss": [], "mse": [], "kld": [], "tfr": [], "KL_weight": [], "psnr": []}
 
     os.makedirs(args.log_dir, exist_ok=True)
     os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
@@ -321,6 +320,8 @@ def main():
             epoch_kld += kld
 
         plot_record['loss'].append(epoch_loss / args.epoch_size)
+        plot_record['mse'].append(epoch_mse / args.epoch_size)
+        plot_record['kld'].append(epoch_kld / args.epoch_size)
         plot_record['KL_weight'].append(beta)
         kl_anneal.update()
         plot_record['tfr'].append(args.tfr)
