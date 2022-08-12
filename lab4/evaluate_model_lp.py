@@ -23,7 +23,7 @@ def plot_pred(x, cond, modules, epoch, args, device):
         gif[t].append(gt_seq[t][5])
         gif[t].append(pred_seq[t][5])
 
-    fname = f'{args.log_dir}/test_lp/sample_{epoch}'
+    fname = f'{args.log_dir}/gen_lp/sample_{epoch}'
     save_image(make_grid(pred_plot, nrow=args.n_eval), fname+'_pred.png')
     save_image(make_grid(gt_plot, nrow=args.n_eval), fname+'_gt.png')
     save_gif(fname+'.gif', gif, duration=0.25)
