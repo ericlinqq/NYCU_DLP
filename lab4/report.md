@@ -72,8 +72,8 @@ $$ \Bbb  E_{Z \sim q(Z|X;\phi)}[\log p(X|Z,c;\theta)] - KL(q(Z|X;\phi)||p(Z|c))$
 
 
 ## **3. Implementation details**  
-**1. Model implementation**  
-* **Encoder**  
+### 1. Model implementation   
+#### a. Encoder  
   The frame encoder uses the same architecture as **VGG16** ([**Simonyan & Zisserman, 2015**][2]) up until the fourth pooling layer and the final convulutional layer contain a **conv4-128** with no padding, besides, the activation function is replaced with $Tanh$, as the figure shown below.  
 ![VGG16](https://i.imgur.com/EhO27pi.jpg)  
 ```python=
@@ -91,13 +91,20 @@ self.mp = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
   
   > $b$ represents the batch size.
   
-* **Decoder**  
+#### b. Decoder   
   The decoder is basically a mirrored version of the encoder with pooling layer replaced with **spatial up-sampling** and a **sigmoid** output layer, as the figure shown below.  
-![Decoder](https://i.imgur.com/0rC0vWt.png
+```python=
+self.c5 = nn.Sequential(
+        nn.Conv2d(512, dim, 4, 1, 0),
+        nn.BatchNorm2d(dim),
+        nn.Tanh()
+        )
+self.mp = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+```
 
   The input $g$ shape here is **($b$, 128, 1, 1)** , which is as same as the output shape of the encoder;  the output $\hat{x}$ shape is **($b$, 3, 64, 64)**, which is as same as the input shape of the encoder.  
 
-* **Reparameterization trick**  
+####  c. Reparameterization trick  
   Since the LSTM in the inference model is expected to output the mean and variance of a Gaussian distribution, where $z$ is sampled from. This however is *non-differientiable*, that is, the model could not be trained **end-to-end**.  
   In order to solve this problem, we need to implement the so-called *"reparameterization trick"*, which simply drawn a $\epsilon$ from standard normal distribution, and the operation is as follow:
   $$ \epsilon \sim N(0, 1) $$  
@@ -116,9 +123,9 @@ def reparameterize(self, mu, logvar):
     return eps.mul(logvar).add_(mu)
 ```  
 
-* **Dataloader**  
+#### d. Dataloader  
   The dataloader loads a batch of the image sequence data (.png) and the condition data (.csv) every time.  
-  For the image, we transforms it into a **tensor**, which would turn 8-bit lightness (0~255) into a **floating point (0~1)**. By concatenating all the image in every time step, we get a image sequence with the shape of **($t$, 3, 64, 64)**.  
+  For the image, we transforms it into a **tensor**, which would turn it into a **floating point (0~1)**. By concatenating all the image in every time step, we get a image sequence with the shape of **($t$, 3, 64, 64)**.  
   
   > $t$ represents the total time step for a image sequence.  
 
@@ -135,18 +142,18 @@ seq, cond = seq.transpose_(0, 1).to(device), cond.transpose_(0, 1).to(device)
 ```  
 
  
-* **Condition**  
+#### e. Condition  
   As mentioned above, I simply **concatenates** the condition data with $h$ and $z$, as the input for the LSTM in prediction model.  
 ```python=
 h_pred = modules['frame_predictor'](torch.cat([cond[i], h, z_t], 1))
 ```
 
-* **KL annealing schedules**  
+#### f. KL annealing schedules  
   Due to the sequential nature of text and video, an auto regressive decoder is typically employed in the
 VAE. This is often implemented with a RNN(LSTM). This introduces one notorious issue when a VAE is trained using traditional methods: the decoder ignores the latent variable, yielding what is termed the ***KL vanishing problem***.  
   [Fu, Li & Liu et al. (2019)][3] hypothesize that the problem is related to the low quality of $z$ at the beginning phase of decoder training. A lower quality $z$ introduces more difficulties in reconstructing $x$ via Path A. As a result, the model is forced to learn an easier solution to decoding: generating $x$ via Path B only, as the figure shown below:  
 ![auto-regressive decoder](https://i.imgur.com/XxOWQvL.png)  
-  It is natural to extend the negative of the objective function in VAE by intoducing a hyperparameter $\beta$ to control the strength of regularization:
+  It is natural to extend the negative of the objective function in VAE by intoducing a hyperparameter $\beta$ to control the strength of regularization:  
 $$ - \Bbb  E_{Z \sim q(Z|X;\phi)}[\log p(X|Z,c;\theta)] + \beta KL(q(Z|X;\phi)||p(Z|c)) $$  
 three different schedules for $\beta$ have been commonly used for VAE.  
 
@@ -186,23 +193,85 @@ class kl_annealing():
 ```  
 This class would construct an instance with variable which is a list contains the kl annealing weight in every epoch, and update function updates the index variable, which the get_beta() function uses as the index to access the beta in the list.  
 
-**2. Teacher forcing**  
+### 2. Teacher forcing   
   In the early phase of the training process, The model capability of prediction is low, if one unit output an bad result, it would definitely affect the learning of the following units.  
   Teacher forcing is a method for efficiently training RNN models, which uses the ground-truth as input, instead of model output from a prior time step as input.
   By using teacher forcing, the model would converge in the earlier iteration, moreover, the training is more stable than using free-running.  
   
-  Since this method highly depends on the ground-truth label, it performs better during the training process. But in the testing phase, without the support of the ground-truth, terrible results may probably be seen.
+  Since this method highly depends on the ground-truth label, it performs better during the training process. But in the testing phase, without the support of the ground-truth, terrible results may probably be seen if the train data and test data are very different from each other, that is, the cross-domain capability of model would be weak.
+  In order to solve this probelem, one way is to use so-called *curriculum learing*. Instead of using teacher forcing during the entire training process, we use *teacher forcing ratio*, which is the probability of using teacher forcing. Teacher forcing ratio will change over time, in the beginning of the training process, teacher forcing ratio is set close to 1, and gradually reduces the use of groud-truth by decreasing teacher forcing ratio.  
+  ```python=
+  args.tfr_decay_step = 1. / (args.niter - args.tfr_start_decay_epoch - 1)
+  if epoch >= args.tfr_start_decay_epoch:
+    ### Update teacher forcing ratio ###
+    args.tfr -= args.tfr_decay_step
+    if args.tfr < args.tfr_lower_bound:
+        args.tfr = args.tfr_lower_bound
+  ```
 
 ## **4. Results and discussion**  
-**1. Results of video prediction**  
-**(a) Make videos or gif images for test result** 
+### 1. Results of video prediction   
+#### a. Make videos or gif images for test result  
+* Cyclical schedule   
+![fp cyclical gif](https://i.imgur.com/DsqhNii.gif)  
+* Monotonic schedule  
+![fp  monotonic gif](https://i.imgur.com/96cD3Dd.gif)
+* Cyclical schedule (learned prior)  
+![lp cyclical gif](https://i.imgur.com/qrJ1KD6.gif)
 
-**(b) Output the prediction at each time step**  
 
-**2. Plot the KL loss and PSNR curves during training**  
+> The ground-truth is on the left hand side and the model prediction is on the right hand side.  
+#### b. Output the prediction at each time step  
+* Ground truth  
+  ![gt png](https://i.imgur.com/ljxwu3C.png)  
+* Cyclical schedule
+  ![fp cyclical png](https://i.imgur.com/jQwFTm4.png)  
+* Monotonic schedule 
+  ![fp monotonic png](https://i.imgur.com/9BvjBbT.png)
+* Cyclical schedule (learned prior)
+  ![lp cyclical png](https://i.imgur.com/gMRsZw3.png)
 
-**3. Discuss the results according to your setting of teacher forcing ratio, KL weight,
-and learning rate.**  
+
+
+> Note that we use past two frames to predict the frames in the future, so the first two frames in ground truth and prediction are exactly the same.  
+
+### 2. Plot the KL loss and PSNR curves during training  
+#### a. Cyclical schedule  
+![fp cyclical curve](https://i.imgur.com/lLJ0Gx4.png)  
+
+#### b. Monotonic schedule  
+![fp monotonic curve](https://i.imgur.com/Bf8pshq.png)
+
+#### c. Cyclical schedule (learned prior)
+![lp cyclical curve](https://i.imgur.com/E2nqGJF.png)    
+
+
+### 3. Discuss the results according to your setting of teacher forcing ratio, KL weight, and learning rate.  
+* Teacher forcing ratio  
+  > In my setting, teacher forcing ratio starts at 1.0, after 11 epochs, it starts to decrease linearly to 0.  
+  
+  As the curve shown above, in the early stage training process, it's very helpful for the frame predictor to learn more from the ground truth and converge faster. Further, the decreasing of teacher forcing ratio forces the frame predictor to try to correct the wrong prediction itself, avoiding *"overcorrect"* problem.  
+  With this setting, the training process becomes more stable
+* KL weight  
+  > In my setting, the number of cycle in cyclical schedule is set to be 3. And the KL annealing ratio is set to be 0.5.  
+  
+  In comparison with cyclical schedule, monotonic schedule seems to be more unstable during the training process, it happens that I try several times to train the monotonic one, but most of the results are extremely bad, the validate PSNR drops to a very low value (below 10), loss value is larger than the early phase of training and the generated images is as follow:  
+  ![monotonic fail gif](https://i.imgur.com/8uupX2C.gif)  
+  It seems like the model has totally broken, according to [Fu, Li & Liu et al. (2019)][3], this may result from underestimating of prior regularization and the posterior $q(Z|X;\phi)$ collapses into a point estimate, causing sub-optimal decoder learning.  
+  Cyclical schedule here contains two consecutive stages within a cycle:  
+  * Annealing  
+  $\beta$ is annealed from 0 to 1, $z$ is forced to learn the global representation of $x$. By gradually increasing $\beta$  towards 1, $q(Z|X;\phi)$ is regularized to transit from a point estimate to a distribution estimate, spreading out to match the prior.  
+  * Fixing  
+  We fix $\beta = 1$ for the rest of training steps within one cycle. This drives the model to optimize the full VAE objective until converge.  
+  
+  As the curve plot shown above, KL loss in the cyclical schedule goes up when the KL weight decrease to 0, and immediately drops to lower value, leaving two spikes on the kl loss curve.
+
+* Learning rate  
+  > In my setting, learning rate is set to be 0.002 and using Adam optimizer with momentum term = 0.9.  
+  
+   
+  
+
 
 
 
