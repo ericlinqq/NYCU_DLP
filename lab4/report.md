@@ -154,7 +154,9 @@ VAE. This is often implemented with a RNN(LSTM). This introduces one notorious i
   [Fu, Li & Liu et al. (2019)][3] hypothesize that the problem is related to the low quality of $z$ at the beginning phase of decoder training. A lower quality $z$ introduces more difficulties in reconstructing $x$ via Path A. As a result, the model is forced to learn an easier solution to decoding: generating $x$ via Path B only, as the figure shown below:  
 ![auto-regressive decoder](https://i.imgur.com/XxOWQvL.png)  
   It is natural to extend the negative of the objective function in VAE by intoducing a hyperparameter $\beta$ to control the strength of regularization:  
+  
 $$ - \Bbb  E_{Z \sim q(Z|X;\phi)}[\log p(X|Z,c;\theta)] + \beta KL(q(Z|X;\phi)||p(Z|c)) $$  
+
 three different schedules for $\beta$ have been commonly used for VAE.  
 
   * Constant schedule  
@@ -226,12 +228,12 @@ This class would construct an instance with variable which is a list contains th
 #### b. Output the prediction at each time step  
 * Ground truth  
   ![gt png](https://i.imgur.com/ljxwu3C.png)  
-* Cyclical schedule
-  ![fp cyclical png](https://i.imgur.com/jQwFTm4.png)  
-* Monotonic schedule 
-  ![fp monotonic png](https://i.imgur.com/9BvjBbT.png)
-* Cyclical schedule (learned prior)
-  ![lp cyclical png](https://i.imgur.com/gMRsZw3.png)
+* Cyclical schedule  
+  ![fp cyclical png](https://i.imgur.com/jQwFTm4.png)    
+* Monotonic schedule  
+  ![fp monotonic png](https://i.imgur.com/9BvjBbT.png)  
+* Cyclical schedule (learned prior)  
+  ![lp cyclical png](https://i.imgur.com/gMRsZw3.png)  
 
 
 
@@ -252,7 +254,7 @@ This class would construct an instance with variable which is a list contains th
 * Teacher forcing ratio  
   > In my setting, teacher forcing ratio starts at 1.0, after 11 epochs, it starts to decrease linearly to 0.  
   
-  As the curve shown above, in the early stage training process, it's very helpful for the frame predictor to learn more from the ground truth and converge faster. Further, the decreasing of teacher forcing ratio forces the frame predictor to try to correct the wrong prediction itself, avoiding *"overcorrect"* problem.  
+  As the curve shown above, in the early stage of training process, it's very helpful for the frame predictor to learn more from the ground truth and converge faster. Further, the decreasing of teacher forcing ratio forces the frame predictor to try to correct the wrong prediction itself, avoiding *"overcorrect"* problem.  
   With this setting, the training process becomes more stable
 * KL weight  
   > In my setting, the number of cycle in cyclical schedule is set to be 3. And the KL annealing ratio is set to be 0.5.  
