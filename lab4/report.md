@@ -210,7 +210,9 @@ This class would construct an instance with variable which is a list contains th
   ```
 
 ## **4. Results and discussion**  
-### 1. Results of video prediction   
+### 1. Results of video prediction
+> The monotonic schedule result here I used is the best result of many experiments. Actually, most of the time in my experiment, monotonic schedule results in a very terrible training of the model.  
+
 #### a. Make videos or gif images for test result  
 * Cyclical schedule   
 ![fp cyclical gif](https://i.imgur.com/DsqhNii.gif)  
@@ -269,7 +271,8 @@ This class would construct an instance with variable which is a list contains th
 * Learning rate  
   > In my setting, learning rate is set to be 0.002 and using Adam optimizer with momentum term = 0.9.  
   
-   
+  The learning rate affects the time used for model to converge. If the value of learning rate is too large, it would lead to the model cannot converge; if it's too low, it would lead to very slow convergence.  
+  In my experiments, it seems like the default (0.002) is a good choice for the initial value of learning rate, with Adam optimizer, the loss converge very fast, it takes about 150 epochs to approach the loss value about 0.002, with the value of validate PSNR is 25.  
   
 
 
