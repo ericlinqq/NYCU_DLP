@@ -5,27 +5,24 @@ from PIL import Image
 import torch
 
 class IclevrDataset(Dataset):
-    def __init__(self, args, device, mode="train"):
+    def __init__(self, args, mode="train"):
         self.mode = mode
-        self.device = device
-        self.data_root = args.data_root
-        self.test_file = args.test_file
-        self.input_dim = args.input_dim
+        self.args = args
 
-        self.obj_idx = json.load(open(f"{self.data_root}/objects.json"))
+        self.obj_idx = json.load(open(f"{self.args.data_root}/objects.json"))
 
         assert self.mode == "train" or self.mode == "test"
         
         if self.mode == "train":
-            data_dict = json.load(open(f"{self.data_root}/train.json"))
+            data_dict = json.load(open(f"{self.args.data_root}/train.json"))
             self.data_list = list(data_dict.items())
 
         elif self.mode == "test":
-            self.data_list = json.load(open(f"{self.data_root}/{self.test_file}"))
+            self.data_list = json.load(open(f"{self.args.data_root}/{self.args.test_file}"))
 
         self.transforms = transforms.Compose([
-            transforms.Resize(self.input_dim),
-            transforms.CenterCrop(self.input_dim),
+            transforms.Resize(self.args.input_dim),
+            transforms.CenterCrop(self.args.input_dim),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
@@ -35,7 +32,7 @@ class IclevrDataset(Dataset):
 
     def __getitem__(self, index):
         if self.mode == "train":
-            img_arr = Image.open(f"{self.data_root}/iclevr/{self.data_list[index][0]}").convert('RGB')
+            img_arr = Image.open(f"{self.args.data_root}/iclevr/{self.data_list[index][0]}").convert('RGB')
             img_tensor = self.transforms(img_arr)
 
             cond_onehot = torch.zeros(len(list(self.obj_idx.keys())))
