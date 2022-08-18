@@ -13,21 +13,21 @@ def parse_args():
 
     parser.add_argument("--train", default=False, action="store_true")
     parser.add_argument("--test", default=False, action="store_true")
-    parser.add_argument("--gan_type", default="infogan", choices=["infogan", "cgan", "wgan", "wgan-large", "acwgan"])
+    parser.add_argument("--gan_type", default="cgan", choices=["infogan", "cgan", "wgan", "wgan-large", "acwgan"])
     parser.add_argument("--seed", default=1, type=int, help="manual seed")
     parser.add_argument("--lr_G", default=2e-4, type=float, help="learning rate for generator")
     parser.add_argument("--lr_D", default=2e-4, type=float, help="learning rate for discriminator")
     parser.add_argument("--batch_size", default=128, type=int, help="batch_size")
     parser.add_argument("--optimizer", default="adam", help="optimizer to train with")
     parser.add_argument("--beta1", default=0.5, type=float, help="beta1 for adam optimizer")
-    parser.add_argument("--beta2", default=0.999, type=float, help="beta2 for adam optimizer")
+    parser.add_argument("--beta2", default=0.99, type=float, help="beta2 for adam optimizer")
     parser.add_argument("--epochs", default=300, type=int, help="number of epochs to train for")
     parser.add_argument("--num_workers", default=4, type=int)
-    parser.add_argument("--n_eval", default=1, help="number of iterations (fixed noise) to evaluate the model")
+    parser.add_argument("--n_eval", default=10, help="number of iterations (fixed noise) to evaluate the model")
     
     parser.add_argument("--input_dim", default=64, type=int, help="dimension of input image")
     parser.add_argument("--z_dim", default=100, type=int, help="dimension of latent vector z")
-    parser.add_argument("--c_dim", default=300, type=int, help="dimension of condition vector")
+    parser.add_argument("--c_dim", default=200, type=int, help="dimension of condition vector")
     parser.add_argument("--n_channel", default=3, type=int, help="number of channels of input image")
 
     parser.add_argument("--report_freq", default=50, type=int, help="unit: steps (iterations), frequency to print loss values on termial")
@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument("--data_root", default="/mnt/d/DLP/lab5/dataset", help="root directory for data")
     parser.add_argument("--result_dir", default="/mnt/d/DLP/lab5/result", help="base directory to save predicted images")
     parser.add_argument("--log_dir", default="/mnt/d/DLP/lab5/log", help="base directory to save training logs")
-    parser.add_argument("--exp_name", default="GAN")
+    parser.add_argument("--exp_name", default="cgan")
     parser.add_argument("--test_file", default="test.json")
 
     args = parser.parse_args()
@@ -51,6 +51,7 @@ def main(args):
     torch.manual_seed(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device} device")
 
     if args.train:
         if os.path.isdir(f"{args.model_dir}/{args.exp_name}"):

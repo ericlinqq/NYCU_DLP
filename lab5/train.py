@@ -26,7 +26,6 @@ class Trainer:
         
         self.evaluator = evaluation_model(self.device)
         self.log_file = f"{args.log_dir}/{args.exp_name}/log.txt"
-        self.log_writer = open(self.log_file, "w")
 
     def train(self, train_loader, test_loader):
         if self.args.gan_type == "cgan":
@@ -41,12 +40,14 @@ class Trainer:
 
         print(f"Start training {self.args.gan_type}...")
 
+        progress = tqdm(total=self.args.epochs)
         for epoch in range(self.args.epochs):
             total_loss_G = 0
             total_loss_D = 0
-            self.netG.train()
-            self.netD.train()
-            for step, (img, cond) in enumerate(tqdm(train_loader, desc=f"[Epoch {epoch:3d}")):   
+            
+            for i, (img, cond) in enumerate(train_loader):  
+                self.netG.train()
+                self.netD.train() 
                 img = img.to(self.device)
                 cond = cond.to(self.device)
 
@@ -57,7 +58,7 @@ class Trainer:
                 """
                 train discriminator
                 """
-                self.netD.zero_grad()
+                self.optimD.zero_grad()
                 # for real images
                 preds = self.netD(img, cond)
                 loss_D_real = criterion(preds, real_label)
@@ -76,7 +77,7 @@ class Trainer:
                 train generator
                 """
                 for _ in range(4):
-                    self.netG.zero_grad()
+                    self.optimG.zero_grad()
                     noise = torch.randn(batch_len, self.args.z_dim, device=self.device)
                     fake = self.netG(noise, cond)
                     preds = self.netD(fake, cond)
@@ -88,7 +89,7 @@ class Trainer:
 
                 total_loss_G += loss_G.item()
                 total_loss_D += loss_D.item()
-                print(f"[Epoch {epoch:3d}] Loss D: {loss_D.item():.4f} Loss G: {loss_G.item():.4f}")
+            progress.update(1)
             
             # evaluate
             self.netG.eval()
@@ -99,13 +100,11 @@ class Trainer:
 
             if score > best_score:
                 best_score = score
-                print(f"[Epoch {epoch:3d}] Saving model checkpoints with best score...")
-                torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}.pth")
-                torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}.pth")
+                torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}_{score:.2f}.pth")
+                torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{score:.2f}.pth")
             
-            print(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader)} avg_loss_D: {total_loss_D / len(train_loader)}")
-            print(f"Testing score: {score:.4f}") 
-            print("-"*10)
+            with open(self.log_file, 'a') as train_record:
+                train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | Testing score: {score:.4f}\n")
             
             save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/pred_{epoch}.png", nrow=8, normalize=True)
 
@@ -115,14 +114,14 @@ class Trainer:
     def test(self, test_loader):
         print("Start testing...")
         test_cond = next(iter(test_loader)).to(self.device)
-        fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device)
         
         avg_score  = 0
         for _ in range(10):
+            noise = torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device)
             self.netG.eval()
             self.netD.eval()
             with torch.no_grad():
-                pred_img = self.netG(fixed_noise, test_cond)
+                pred_img = self.netG(noise, test_cond)
             score = self.evaluator.eval(pred_img, test_cond)
             print(f"Testing score: {score:.4f}")
             avg_score += score 

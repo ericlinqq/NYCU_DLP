@@ -19,7 +19,7 @@ class Generator(nn.Module):
             self.layer_list.append(
                 nn.Sequential(
                     nn.ConvTranspose2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=paddings[i-1]),
-                    nn.BatchNorm2d(channels[i-1]),
+                    nn.BatchNorm2d(channels[i]),
                     nn.ReLU()
                 )
             )
@@ -76,9 +76,3 @@ class Discriminator(nn.Module):
         out = self.layer(out).view(-1)
 
         return out
-
-
-        
-
-
-        
