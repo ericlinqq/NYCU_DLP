@@ -39,6 +39,12 @@ class Generator(nn.Module):
         out = self.layer(out)
 
         return out
+    
+    def init_weight(self, mean=0, std=0.02):
+        for m in self._modules:
+            if isinstance(self._modules[m], nn.Conv2d) or isinstance(self._modules[m], nn.ConvTranspose2d):
+                self._modules[m].weight.data.normal_(mean, std)
+                self._modules[m].bias.data.zero_()
 
 class Discriminator(nn.Module):
     def __init__(self, args):
@@ -50,7 +56,7 @@ class Discriminator(nn.Module):
             nn.LeakyReLU()
         )
 
-        channels = [4, self.args.input_dim, self.args.input_dim*2, self.args.input_dim*4, self.args.input_dim*8]
+        channels = [self.args.n_channel+1, self.args.input_dim, self.args.input_dim*2, self.args.input_dim*4, self.args.input_dim*8]
         self.layer_list = []
 
         for i in range(1, len(channels)):
@@ -76,3 +82,9 @@ class Discriminator(nn.Module):
         out = self.layer(out).view(-1)
 
         return out
+
+    def init_weight(self, mean=0, std=0.02):
+        for m in self._modules:
+            if isinstance(self._modules[m], nn.Conv2d) or isinstance(self._modules[m], nn.ConvTranspose2d):
+                self._modules[m].weight.data.normal_(mean, std)
+                self._modules[m].bias.data.zero_()
