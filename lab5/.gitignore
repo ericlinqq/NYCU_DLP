@@ -1,2 +1,6 @@
 iclevr.*
 iclevr
+__pycache__
+checkpoints
+log
+result
