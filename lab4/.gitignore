@@ -1,2 +1,12 @@
 processed_data/
-processed_data.*
+*.zip
+fp
+lp
+fail.gif
+__pycache__
+gen_demo
+gen_fp
+gen_fp_mono
+gen_lp
+logs
+model.pth
