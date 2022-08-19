@@ -10,8 +10,6 @@ class IclevrDataset(Dataset):
         self.args = args
 
         self.obj_idx = json.load(open(f"{self.args.data_root}/objects.json"))
-
-        assert self.mode == "train" or self.mode == "test"
         
         if self.mode == "train":
             data_dict = json.load(open(f"{self.args.data_root}/train.json"))
@@ -21,8 +19,7 @@ class IclevrDataset(Dataset):
             self.data_list = json.load(open(f"{self.args.data_root}/{self.args.test_file}"))
 
         self.transforms = transforms.Compose([
-            transforms.Resize(self.args.input_dim),
-            transforms.CenterCrop(self.args.input_dim),
+            transforms.Resize([self.args.input_dim, self.args.input_dim]),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])

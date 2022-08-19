@@ -46,9 +46,6 @@ def parse_args():
     return args
 
 def main(args):
-    print(f"Random seed: {args.seed}")
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")

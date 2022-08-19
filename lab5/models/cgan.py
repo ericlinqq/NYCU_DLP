@@ -39,12 +39,6 @@ class Generator(nn.Module):
         out = self.layer(out)
 
         return out
-    
-    def init_weight(self, mean=0, std=0.02):
-        for m in self._modules:
-            if isinstance(self._modules[m], nn.Conv2d) or isinstance(self._modules[m], nn.ConvTranspose2d):
-                self._modules[m].weight.data.normal_(mean, std)
-                self._modules[m].bias.data.zero_()
 
 class Discriminator(nn.Module):
     def __init__(self, args):
@@ -81,10 +75,4 @@ class Discriminator(nn.Module):
         out = torch.cat([X, c], dim=1)
         out = self.layer(out).view(-1)
 
-        return out
-
-    def init_weight(self, mean=0, std=0.02):
-        for m in self._modules:
-            if isinstance(self._modules[m], nn.Conv2d) or isinstance(self._modules[m], nn.ConvTranspose2d):
-                self._modules[m].weight.data.normal_(mean, std)
-                self._modules[m].bias.data.zero_()
+        return out 
