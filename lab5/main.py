@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument("--beta2", default=0.99, type=float, help="beta2 for adam optimizer")
     parser.add_argument("--epochs", default=300, type=int, help="number of epochs to train for")
     parser.add_argument("--num_workers", default=4, type=int)
-    parser.add_argument("--n_eval", default=10, help="number of iterations (fixed noise) to evaluate the model")
+    parser.add_argument("--n_eval", default=10, type=int, help="number of iterations (fixed noise) to evaluate the model")
     
     parser.add_argument("--input_dim", default=64, type=int, help="dimension of input image")
     parser.add_argument("--z_dim", default=100, type=int, help="dimension of latent vector z")
