@@ -128,7 +128,9 @@ class Trainer:
                 with torch.no_grad():
                     pred_img = self.netG(fixed_noise[eval_iter], test_cond)
                 score = self.evaluator.eval(pred_img, test_cond)
-                avg_score = score
+                avg_score += score
+
+            avg_score /= self.args.n_eval
 
             if avg_score > best_score:
                 best_score = avg_score
@@ -209,6 +211,8 @@ class Trainer:
                         pred_img = self.netG(fixed_noise[n_eval], test_cond)
                     score = self.evaluator.eval(pred_img, test_cond)
                     avg_score += score
+                
+                avg_score /= self.args.n_eval
 
                 if avg_score > best_score:
                     best_score = avg_score
@@ -242,8 +246,10 @@ class Trainer:
             print(f"Testing score: {score:.4f}")
             avg_score += score 
         
+        avg_score /= len(fixed_noise)
+        
         save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/eval.png", nrow=8, normalize=True)
-        print(f"avg score: {avg_score / len(fixed_noise):.2f}")
+        print(f"avg score: {avg_score:.2f}")
 
 
 
