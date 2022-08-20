@@ -63,7 +63,9 @@ class Trainer:
         criterion = nn.BCELoss()
 
         test_cond = next(iter(test_loader)).to(self.device)
-        fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device)
+        fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device) for eval_ in range(self.args.n_eval)]
+        fixed_noise = torch.stack(fixed_noise)
+        torch.save(fixed_noise, f"{self.args.model_dir}/{self.args.exp_name}/fixed_noise.pt")
 
         print(f"Start training {self.args.gan_type}...")
 
@@ -119,28 +121,32 @@ class Trainer:
             progress.update(1)
             
             # evaluate
-            self.netG.eval()
-            self.netD.eval()
-            with torch.no_grad():
-                pred_img = self.netG(fixed_noise, test_cond)
-            score = self.evaluator.eval(pred_img, test_cond)
+            avg_score = 0
+            for eval_iter in range(self.args.n_eval):
+                self.netG.eval()
+                self.netD.eval() 
+                with torch.no_grad():
+                    pred_img = self.netG(fixed_noise[eval_iter], test_cond)
+                score = self.evaluator.eval(pred_img, test_cond)
+                avg_score = score
 
-            if score > best_score:
-                best_score = score
-                torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}_{score:.2f}.pth")
-                torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{score:.2f}.pth")
+            if avg_score > best_score:
+                best_score = avg_score
+                torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}_{avg_score:.2f}.pth")
+                torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{avg_score:.2f}.pth")
             
             with open(self.log_file, 'a') as train_record:
-                train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | Testing score: {score:.4f}\n")
+                train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | avg_score: {avg_score / self.args.n_eval:.4f}\n")
             
             save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/pred_{epoch}.png", nrow=8, normalize=True)
 
     def train_wgan(self, train_loader, test_loader):
             best_score = 0
             
-
             test_cond = next(iter(test_loader)).to(self.device)
-            fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device)
+            fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device) for eval_ in range(self.args.n_eval)]
+            fixed_noise = torch.stack(fixed_noise)
+            torch.save(fixed_noise, f"{self.args.model_dir}/{self.args.exp_name}/fixed_noise.pt")
 
             print(f"Start training {self.args.gan_type}...")
 
@@ -195,19 +201,22 @@ class Trainer:
                 progress.update(1)
                 
                 # evaluate
-                self.netG.eval()
-                self.netD.eval()
-                with torch.no_grad():
-                    pred_img = self.netG(fixed_noise, test_cond)
-                score = self.evaluator.eval(pred_img, test_cond)
+                avg_score = 0
+                for n_eval in range(self.args.n_eval):
+                    self.netG.eval()
+                    self.netD.eval()
+                    with torch.no_grad():
+                        pred_img = self.netG(fixed_noise[n_eval], test_cond)
+                    score = self.evaluator.eval(pred_img, test_cond)
+                    avg_score += score
 
-                if score > best_score:
-                    best_score = score
-                    torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}_{score:.2f}.pth")
-                    torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{score:.2f}.pth")
+                if avg_score > best_score:
+                    best_score = avg_score
+                    torch.save(self.netG.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Generator_{epoch}_{avg_score:.2f}.pth")
+                    torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{avg_score:.2f}.pth")
                 
                 with open(self.log_file, 'a') as train_record:
-                    train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | Testing score: {score:.4f}\n")
+                    train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | avg_score: {avg_score:.4f}\n")
                 
                 save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/pred_{epoch}.png", nrow=8, normalize=True)
 
@@ -216,20 +225,25 @@ class Trainer:
     def test(self, test_loader):
         print("Start testing...")
         test_cond = next(iter(test_loader)).to(self.device)
-        
+
+        try:
+            fixed_noise = torch.load(f"{self.args.model.dir}/{self.args.exp_name}/fixed_noise.pt").to(self.device)
+        except:
+            print("`fixed_noise.pt` not found, try initializing random noise...")
+            fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device) for eval_ in range(self.args.n_eval)]
+
         avg_score  = 0
-        for _ in range(10):
-            noise = torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device)
+        for eval_iter in range(len(fixed_noise)):
             self.netG.eval()
             self.netD.eval()
             with torch.no_grad():
-                pred_img = self.netG(noise, test_cond)
+                pred_img = self.netG(fixed_noise[eval_iter], test_cond)
             score = self.evaluator.eval(pred_img, test_cond)
             print(f"Testing score: {score:.4f}")
             avg_score += score 
         
         save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/eval.png", nrow=8, normalize=True)
-        print(f"avg score: {avg_score/10:.2f}")
+        print(f"avg score: {avg_score / len(fixed_noise):.2f}")
 
 
 
