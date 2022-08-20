@@ -138,7 +138,7 @@ class Trainer:
                 torch.save(self.netD.state_dict(), f"{self.args.model_dir}/{self.args.exp_name}/Discriminator_{epoch}_{avg_score:.2f}.pth")
             
             with open(self.log_file, 'a') as train_record:
-                train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | avg_score: {avg_score / self.args.n_eval:.4f}\n")
+                train_record.write(f"[Epoch {epoch:3d}] avg_loss_G: {total_loss_G / len(train_loader):.4f} | avg_loss_D: {total_loss_D / len(train_loader):.4f} | avg_score: {avg_score:.4f}\n")
             
             save_image(pred_img, f"{self.args.result_dir}/{self.args.exp_name}/pred_{epoch}.png", nrow=8, normalize=True)
 
