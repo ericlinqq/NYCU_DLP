@@ -13,7 +13,7 @@ def parse_args():
 
     parser.add_argument("--train", default=False, action="store_true")
     parser.add_argument("--test", default=False, action="store_true")
-    parser.add_argument("--gan_type", default="cgan", choices=["infogan", "cgan", "wgan", "wgan-large", "acwgan"])
+    parser.add_argument("--gan_type", default="cgan")
     parser.add_argument("--seed", default=1, type=int, help="manual seed")
     parser.add_argument("--lr_G", default=2e-4, type=float, help="learning rate for generator")
     parser.add_argument("--lr_D", default=2e-4, type=float, help="learning rate for discriminator")
@@ -29,6 +29,9 @@ def parse_args():
     parser.add_argument("--z_dim", default=100, type=int, help="dimension of latent vector z")
     parser.add_argument("--c_dim", default=200, type=int, help="dimension of condition vector")
     parser.add_argument("--n_channel", default=3, type=int, help="number of channels of input image")
+
+    parser.add_argument("--n_critic", default=5, type=int, help="number of iterations of the critic per generator iteration")
+    parser.add_argument("--lambda_gp", default=10, type=int, help="factor of gradient penalty term")
 
     parser.add_argument("--report_freq", default=50, type=int, help="unit: steps (iterations), frequency to print loss values on termial")
     parser.add_argument("--save_img_freq", default=1, type=int, help="unit: epochs, frequency to save output images from generator")

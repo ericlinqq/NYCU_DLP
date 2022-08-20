@@ -29,21 +29,23 @@ class IclevrDataset(Dataset):
 
     def __getitem__(self, index):
         if self.mode == "train":
-            img_arr = Image.open(f"{self.args.data_root}/iclevr/{self.data_list[index][0]}").convert('RGB')
-            img_tensor = self.transforms(img_arr)
+            img = Image.open(f"{self.args.data_root}/iclevr/{self.data_list[index][0]}").convert('RGB')
+            img = self.transforms(img)
 
-            cond_onehot = torch.zeros(len(list(self.obj_idx.keys())))
-            for obj_type in self.data_list[index][1]:
-                cond_idx = self.obj_idx[obj_type]
-                cond_onehot[cond_idx] = 1
+            cond_onehot = self.int2onehot(self.data_list[index][1])
             
-            return img_tensor, cond_onehot
+            return img, cond_onehot
         
         elif self.mode == "test":
-            cond_onehot = torch.zeros(len(list(self.obj_idx.keys())))
-            for obj_type in self.data_list[index]:
-                cond_idx = self.obj_idx[obj_type]
-                cond_onehot[cond_idx] = 1
+            cond_onehot = self.int2onehot(self.data_list[index])
 
             return cond_onehot
+        
+    def int2onehot(self, int_list):
+        cond_onehot = torch.zeros(len(list(self.obj_idx.keys())))
+        for i in int_list:
+            cond_idx = self.obj_idx[i]
+            cond_onehot[cond_idx] = 1
+        
+        return cond_onehot
 
