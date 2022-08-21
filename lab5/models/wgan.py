@@ -18,14 +18,14 @@ class Generator(nn.Module):
         for i in range(1, len(channels)):
             layer_list.append(
                 nn.Sequential(
-                    nn.ConvTranspose2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=paddings[i-1]),
+                    nn.ConvTranspose2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=paddings[i-1], bias=False),
                     nn.BatchNorm2d(channels[i]),
-                    nn.ReLU()
+                    nn.ReLU(True)
                 )
             )
         layer_list.append(
             nn.Sequential(
-                nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, kernel_size=4, stride=2, padding=1),
+                nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, kernel_size=4, stride=2, padding=1, bias=False),
                 nn.Tanh()
             )
         )
@@ -51,20 +51,20 @@ class Discriminator(nn.Module):
         )
 
         channels = [self.args.n_channel+1, self.args.input_dim, self.args.input_dim*2, self.args.input_dim*4, self.args.input_dim*8]
+        size = [int(self.args.input_dim/2), int(self.args.input_dim/4), int(self.args.input_dim/8), int(self.args.input_dim/16)]
         layer_list = []
 
         for i in range(1, len(channels)):
             layer_list.append(
                 nn.Sequential(
-                    nn.Conv2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=1),
-                    nn.InstanceNorm2d(channels[i]),
-                    nn.LeakyReLU(0.2)
+                    nn.Conv2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=1, bias=False),
+                    nn.LayerNorm([channels[i], size[i-1], size[i-1]]),
+                    nn.LeakyReLU(0.2, inplace=True)
                 )
             )
         layer_list.append(
             nn.Sequential(
-                nn.Conv2d(self.args.input_dim*8, 1, kernel_size=4, stride=1),
-                # nn.Sigmoid()
+                nn.Conv2d(self.args.input_dim*8, 1, kernel_size=4, stride=1, bias=False)
             )
         )
 

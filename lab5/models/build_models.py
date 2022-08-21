@@ -2,10 +2,16 @@ import torch
 import torch.nn as nn
 from models import cgan, wgan
 
-def init_weight(m, mean=0, std=0.02):
+def init_weight(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, mean, std)
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        # nn.init.zeros_(m.bias.data)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.zeros_(m.bias.data)
+    elif classname.find('LayerNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.zeros_(m.bias.data)
 
 def build_models(args):
