@@ -231,7 +231,7 @@ class Trainer:
         test_cond = next(iter(test_loader)).to(self.device)
 
         try:
-            fixed_noise = torch.load(f"{self.args.model.dir}/{self.args.exp_name}/fixed_noise.pt").to(self.device)
+            fixed_noise = torch.load(f"{self.args.model_dir}/{self.args.exp_name}/fixed_noise.pt").to(self.device) 
         except:
             print("`fixed_noise.pt` not found, try initializing random noise...")
             fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, device=self.device) for eval_ in range(self.args.n_eval)]
