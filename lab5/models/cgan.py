@@ -18,14 +18,14 @@ class Generator(nn.Module):
         for i in range(1, len(channels)):
             self.layer_list.append(
                 nn.Sequential(
-                    nn.ConvTranspose2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=paddings[i-1]),
+                    nn.ConvTranspose2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=paddings[i-1], bias=False),
                     nn.BatchNorm2d(channels[i]),
-                    nn.ReLU()
+                    nn.ReLU(True)
                 )
             )
         self.layer_list.append(
             nn.Sequential(
-                nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, kernel_size=4, stride=2, padding=1),
+                nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, kernel_size=4, stride=2, padding=1, bias=False),
                 nn.Tanh()
             )
         )
@@ -56,14 +56,14 @@ class Discriminator(nn.Module):
         for i in range(1, len(channels)):
             self.layer_list.append(
                 nn.Sequential(
-                    nn.Conv2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=1),
+                    nn.Conv2d(channels[i-1], channels[i], kernel_size=4, stride=2, padding=1, bias=False),
                     nn.BatchNorm2d(channels[i]),
-                    nn.LeakyReLU()
+                    nn.LeakyReLU(0.2, inplace=True)
                 )
             )
         self.layer_list.append(
             nn.Sequential(
-            nn.Conv2d(self.args.input_dim*8, 1, kernel_size=4, stride=1),
+            nn.Conv2d(self.args.input_dim*8, 1, kernel_size=4, stride=1, bias=False),
             nn.Sigmoid()
             )
         )
