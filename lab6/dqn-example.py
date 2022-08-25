@@ -75,6 +75,9 @@ class DQN:
          ## TODO ##
         if random.random() < epsilon:
             return action_space.sample()
+        else:
+            with torch.no_grad():
+                return self._behavior_net(torch.from_numpy(state).view(1, -1).to(self.device)).max(dim=1)[1].item()
 
     def append(self, state, action, reward, next_state, done):
         self._memory.append(state, [action], [reward / 10], next_state,
