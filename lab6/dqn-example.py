@@ -185,7 +185,8 @@ def test(args, env, agent, writer):
         state = env.reset()
         ## TODO ##
         for t in itertools.count(start=1):
-            env.render()
+            if args.render:
+                env.render()
             action = agent.select_action(state, epsilon, action_space)
             next_state, reward, done, _ = env.step(action)
 
