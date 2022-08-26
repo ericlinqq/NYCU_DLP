@@ -127,7 +127,7 @@ class DQN:
             }, model_path)
 
     def load(self, model_path, checkpoint=False):
-        model = torch.load(model_path)
+        model = torch.load(model_path, map_location=self.device)
         self._behavior_net.load_state_dict(model['behavior_net'])
         if checkpoint:
             self._target_net.load_state_dict(model['target_net'])
