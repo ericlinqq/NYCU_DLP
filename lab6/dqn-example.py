@@ -38,16 +38,22 @@ class Net(nn.Module):
     def __init__(self, state_dim=8, action_dim=4, hidden_dim=(400, 300)):
         super().__init__()
         ## TODO ##
-        self.fc1 = nn.Linear(state_dim, hidden_dim[0])
-        self.fc2 = nn.Linear(hidden_dim[0], hidden_dim[1])
-        self.fc3 = nn.Linear(hidden_dim[1], action_dim)
-        self.relu = nn.ReLU()
+        channels = [state_dim, hidden_dim[0], hidden_dim[1]]
+        layer_list = []
+
+        for i in range(1, len(channels)):
+            layer_list.append(
+                nn.Sequential(
+                    nn.Linear(channels[i-1], channels[i]),
+                    nn.ReLU()
+                )
+            )
+        layer_list.append(nn.Linear(hidden_dim[1], action_dim))
+        self.layer = nn.Sequential(*layer_list)
 
     def forward(self, x):
         ## TODO ##
-        out = self.relu(self.fc1(x))
-        out = self.relu(self.fc2(out))
-        out = self.fc3(out)
+        out = self.layer(x)
         return out
 
 
