@@ -159,7 +159,7 @@ def select_action(self, state, noise=True):
 ```  
   
 We use the $Q_{target}$ output from the target network and the $Q(s, a)$ output from the behavior to compute the MSE loss, and then update $Q$.  
-We can obtain $Q(s, a)$ by the actor network $\mu$ and the critic network $Q$ from behavior network. Since we want to maximize $Q(s, a)$ by updating actor network, we define $L_{actor} = \Bbb E[-Q \left( s, \mu \left(s \right ) \right)]$, and update through backpropagation.  
+We can obtain $Q(s, a)$ by the actor network $\mu$ and the critic network $Q$ from behavior network. Since we want to maximize $Q(s, a)$ by updating actor network, we define $L_{\mu} = \Bbb E[-Q \left( s, \mu \left(s \right ) \right)]$, and update through backpropagation.  
 
 ```python=
 def _update_behavior_network(self, gamma):
