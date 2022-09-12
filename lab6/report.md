@@ -159,7 +159,7 @@ def select_action(self, state, noise=True):
 ```  
   
 We use the $Q_{target}$ output from the target network and the $Q(s, a)$ output from the behavior to compute the MSE loss, and then update $Q$.  
-We can obtain $Q(s, a)$ by the actor network $\mu$ and the critic network $Q$ from behavior network. Since we want to maximize $Q(s, a)$ by updating actor network, we define $L_{actor} = \Bbb E[-Q \left( s, \mu \left(s \right ) \right)]$, and update through backpropagation.  
+We can obtain $Q(s, a)$ by the actor network $\mu$ and the critic network $Q$ from behavior network. Since we want to maximize $Q(s, a)$ by updating actor network, we define $L_{\mu} = \Bbb E[-Q \left( s, \mu \left(s \right ) \right)]$, and update through backpropagation.  
 
 ```python=
 def _update_behavior_network(self, gamma):
@@ -216,43 +216,56 @@ Action network: $\mu$ with parameters $\theta_\mu$
 Critic network: $Q$ with parameters $\theta_Q$  
 The actor network is reponsible for updating its parameters in a way suggested by the critic network. First, we sample a random mini-batch of transitions $(s_i, a_i, r_i, s_{i+1})$ from the replay memory buffer.  
 We can obtain the $\mu(s_i|\theta_\mu)$ via the actor network by the current state $s_i$, and using it to caluculate $Q(s_i, \mu(s_i|\theta_\mu)|\theta_Q)$ by the critic network. Since we want to maximize the Q-value by updating actor network, we define the loss function as follow,   
+
 $$
 L_{\mu} = - \frac{1}{M}\sum_{i}Q(s_i, \mu(s_i|\theta_\mu)|\theta_Q)
 $$  
+
 where $M$ is the batch size.  
 The derivation of the actor network's gradient is as follow,  
+
 $$
 \nabla_{\theta_\mu}L_\mu = - \frac{1}{M}\sum_{i}\nabla_{\theta_\mu}Q(s_i, \mu(s_i|\theta_\mu)|\theta_Q)
 $$  
+
 $$
 = - \frac{1}{M}\sum_{i}\nabla_{a}Q(s, a |\theta_Q)\vert_{s=s_i, a=\mu(s_i|\theta_\mu)} \nabla_{\theta_\mu}\mu(s|\theta_\mu)\vert_{s=s_i}
 $$
+
 ## 6. Implementation and the gradient of critic updating.  
 Target network of critic: $Q_t$ with parameters $\theta_{Q_t}$  
 Target network of actor: $\mu_t$ with parameters $\theta_{\mu_t}$  
 The target Q-value for the critic network is as follow,  
+
 $$
 t_i = r_i + \gamma Q_t(s_{i+1}, \mu_t(s_{i+1}|\theta_{\mu_t})|\theta_{Q_t})
 $$  
+
 where the $\gamma$ is the discount factor.  
 Since we wnat to minimize the difference between the $Q(s_i, a_i| \theta_Q)$ and the target value $t_i$ over all $M$ transitions. The loss function is defined as follow,  
+
 $$
 L_Q = \frac{1}{M}\sum_{i}(t_i - Q(s_i, a|\_Q))^2
 $$  
+
 which is the MSE loss.  
 The derivation of the critic network's gradient is as follow,  
+
 $$
 \nabla_{\theta_Q}L_Q = - \frac{1}{M}\sum_{i}\nabla_{\theta_Q}(t_i - Q(s_i, a|\theta_Q))^2
 $$  
+
 $$
 \thickapprox (r_i + \gamma Q(s_{i+1}, \mu(s_{i+1}|\theta_{\mu_t})|\theta_{Q_t})) - Q(s_i, a_i|\theta_Q)\nabla_{\theta_Q}Q(s_i, a_i|\theta_Q)
 $$
+
 ## 7. Effects of the discount factor.  
 An agent's discounted reward is as follow,  
 
 $$
 G_t = R_{t+1} + \lambda R_{t+2} + \lambda ^2R_{t+3} + ... = \sum_{k=0}^{\infty}\lambda^kR_{t+k+1}
 $$  
+
 where $\lambda < 1$ is the discount factor.  
 With smaller discount factor, as in the equation above shown, the agent would mostly focus on the current rewards, on the other hand, with the larger discount factor, the long-term rewards have more impact to the agent.  
 

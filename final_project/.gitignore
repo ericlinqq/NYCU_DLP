@@ -1,1 +1,4 @@
+data256x256/
+*.zip
+__pycache__
 checkpoints
